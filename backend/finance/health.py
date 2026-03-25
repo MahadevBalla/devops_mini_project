@@ -288,6 +288,9 @@ def calculate_money_health_score(profile: UserProfile) -> MoneyHealthResult:
         score_tax_efficiency(profile),
     ]
 
+    for d in dimensions:
+        d.score = round(d.score, 2)
+
     overall = sum(d.score * DIMENSION_WEIGHTS[d.name] for d in dimensions)
     overall = _clamp(overall)
 

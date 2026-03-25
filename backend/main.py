@@ -17,7 +17,16 @@ from fastapi.responses import JSONResponse
 from core.config import settings
 from core.exceptions import MoneyMentorError
 from db.session_store import init_db
-from routers import fire_planner, health_score, tax_wizard
+from routers import (
+    chat,
+    couple_planner,
+    fire_planner,
+    health_score,
+    life_event,
+    mf_xray,
+    tax_wizard,
+    voice,
+)
 
 # Logging
 logging.basicConfig(
@@ -79,6 +88,11 @@ async def generic_error_handler(request: Request, exc: Exception) -> JSONRespons
 app.include_router(health_score.router)
 app.include_router(fire_planner.router)
 app.include_router(tax_wizard.router)
+app.include_router(life_event.router)
+app.include_router(couple_planner.router)
+app.include_router(mf_xray.router)
+app.include_router(chat.router)
+app.include_router(voice.router)
 
 
 # Health check

@@ -1,34 +1,29 @@
 """
 models/schemas.py
 Pydantic v2 models — the single source of truth for all data contracts.
-Frontend, backend, and agents all share these shapes via the API contract.
 """
 
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
 
-# Enums
 class RiskProfile(str, Enum):
     CONSERVATIVE = "conservative"
     MODERATE = "moderate"
     AGGRESSIVE = "aggressive"
-
 
 class EmploymentType(str, Enum):
     SALARIED = "salaried"
     SELF_EMPLOYED = "self_employed"
     BUSINESS = "business"
 
-
 class TaxRegime(str, Enum):
     OLD = "old"
     NEW = "new"
-
 
 class GoalType(str, Enum):
     RETIREMENT = "retirement"
@@ -39,25 +34,30 @@ class GoalType(str, Enum):
     VACATION = "vacation"
     CUSTOM = "custom"
 
+class LifeEventType(str, Enum):
+    BONUS = "bonus"
+    INHERITANCE = "inheritance"
+    MARRIAGE = "marriage"
+    NEW_BABY = "new_baby"
+    JOB_LOSS = "job_loss"
+    HOME_PURCHASE = "home_purchase"
 
-# Sub-models
+
 class Goal(BaseModel):
     type: GoalType
     label: str = ""
     target_amount: float = Field(..., ge=0)
     target_year: int = Field(..., ge=2025, le=2075)
 
-
 class DebtItem(BaseModel):
     name: str
     outstanding: float = Field(..., ge=0)
     emi: float = Field(..., ge=0)
-    interest_rate: float = Field(..., ge=0, le=100)  # % p.a.
+    interest_rate: float = Field(..., ge=0, le=100)
     is_secured: bool = True
 
-
 class AssetAllocation(BaseModel):
-    equity: float = Field(0.0, ge=0)  # ₹
+    equity: float = Field(0.0, ge=0)
     debt: float = Field(0.0, ge=0)
     gold: float = Field(0.0, ge=0)
     real_estate: float = Field(0.0, ge=0)
@@ -67,30 +67,18 @@ class AssetAllocation(BaseModel):
 
     @property
     def total(self) -> float:
-        return (
-            self.equity
-            + self.debt
-            + self.gold
-            + self.real_estate
-            + self.cash
-            + self.ppf_epf
-            + self.other
-        )
-
+        return self.equity + self.debt + self.gold + self.real_estate + self.cash + self.ppf_epf + self.other
 
 class InsuranceCoverage(BaseModel):
     has_term_life: bool = False
-    term_cover: float = 0.0  # ₹ sum assured
+    term_cover: float = 0.0
     has_health: bool = False
-    health_cover: float = 0.0  # ₹ sum assured
+    health_cover: float = 0.0
     has_critical_illness: bool = False
 
-
 class TaxDeductions(BaseModel):
-    """Old-regime deductions."""
-
-    section_80c: float = Field(0.0, ge=0, le=150_000)  # max 1.5L
-    section_80d_self: float = Field(0.0, ge=0, le=25_000)
+    section_80c: float = Field(0.0, ge=0, le=150_000)
+    section_80d_self: float = Field(0.0, ge=0, le=50_000)
     section_80d_parents: float = Field(0.0, ge=0, le=50_000)
     nps_80ccd_1b: float = Field(0.0, ge=0, le=50_000)
     hra_claimed: float = Field(0.0, ge=0)
@@ -98,34 +86,18 @@ class TaxDeductions(BaseModel):
     other_deductions: float = Field(0.0, ge=0)
 
 
-# Core input model
 class UserProfile(BaseModel):
-    """Complete financial profile — intake agent produces this."""
-
-    # Demographics
     age: int = Field(..., ge=18, le=70)
     city: str = Field(..., min_length=2)
     employment_type: EmploymentType = EmploymentType.SALARIED
     dependents: int = Field(0, ge=0, le=10)
-
-    # Income & Expenses
     monthly_gross_income: float = Field(..., ge=0)
     monthly_expenses: float = Field(..., ge=0)
-
-    # Existing assets
     emergency_fund: float = Field(0.0, ge=0)
     assets: AssetAllocation = Field(default_factory=AssetAllocation)
-
-    # Debts
     debts: list[DebtItem] = Field(default_factory=list)
-
-    # Insurance
     insurance: InsuranceCoverage = Field(default_factory=InsuranceCoverage)
-
-    # Tax
     tax_deductions: TaxDeductions = Field(default_factory=TaxDeductions)
-
-    # Goals & profile
     retirement_age: int = Field(60, ge=30, le=70)
     risk_profile: RiskProfile = RiskProfile.MODERATE
     goals: list[Goal] = Field(default_factory=list)
@@ -155,35 +127,23 @@ class UserProfile(BaseModel):
         return self.retirement_age - self.age
 
 
-# Output models — Finance Engine returns these
-class DimensionScore(BaseModel):
-    name: str
-    score: float = Field(..., ge=0, le=100)
-    label: str  # "Good", "Fair", "Poor"
-    insight: str  # one-line deterministic insight
-
-
-class MoneyHealthResult(BaseModel):
-    overall_score: float = Field(..., ge=0, le=100)
-    grade: str  # A, B, C, D, F
-    dimensions: list[DimensionScore]
-    monthly_surplus: float
-    total_net_worth: float
-
-
+# FIRE
 class SIPGoal(BaseModel):
     goal_label: str
     target_amount: float
     target_year: int
     required_monthly_sip: float
+    required_stepup_sip: float = 0.0
+    stepup_rate: float = 0.10
     current_on_track: bool
-
 
 class FIREPlan(BaseModel):
     fi_corpus_required: float
     current_corpus: float
     corpus_gap: float
     required_monthly_sip: float
+    required_stepup_sip: float = 0.0
+    stepup_rate: float = 0.10
     projected_fi_age: float
     years_to_fi: float
     monthly_retirement_expense: float
@@ -191,6 +151,22 @@ class FIREPlan(BaseModel):
     on_track: bool
 
 
+# Health
+class DimensionScore(BaseModel):
+    name: str
+    score: float = Field(..., ge=0, le=100)
+    label: str
+    insight: str
+
+class MoneyHealthResult(BaseModel):
+    overall_score: float
+    grade: str
+    dimensions: list[DimensionScore]
+    monthly_surplus: float
+    total_net_worth: float
+
+
+# Tax
 class TaxRegimeComparison(BaseModel):
     gross_income: float
     old_regime_tax: float
@@ -203,6 +179,94 @@ class TaxRegimeComparison(BaseModel):
     deduction_potential: float
 
 
+# Life Event
+class LifeEventInput(BaseModel):
+    profile: UserProfile
+    event_type: LifeEventType
+    event_amount: float = Field(0.0, ge=0)
+    event_details: dict = Field(default_factory=dict)
+
+class LifeEventAllocation(BaseModel):
+    category: str
+    amount: float
+    rationale: str
+
+class LifeEventResult(BaseModel):
+    event_type: LifeEventType
+    event_amount: float
+    allocations: list[LifeEventAllocation]
+    tax_impact: float
+    insurance_gaps: list[str]
+    priority_actions: list[str]
+
+
+# Couple
+class CoupleProfile(BaseModel):
+    partner_a: UserProfile
+    partner_b: UserProfile
+    is_married: bool = True
+    joint_goals: list[Goal] = Field(default_factory=list)
+
+class CoupleOptimisation(BaseModel):
+    combined_net_worth: float
+    combined_monthly_surplus: float
+    better_hra_claimant: str
+    hra_savings: float
+    nps_matching_benefit: float
+    partner_a_sip: float
+    partner_b_sip: float
+    joint_tax_saving: float
+    joint_insurance_recommendation: str
+    recommendations: list[str]
+
+
+# MF X-Ray
+class MFHolding(BaseModel):
+    scheme_name: str
+    isin: str
+    units: float
+    avg_nav: float
+    current_nav: float
+    invested_amount: float
+    current_value: float
+    xirr: Optional[float] = None
+    expense_ratio: Optional[float] = None
+    category: str = ""
+
+class OverlapPair(BaseModel):
+    fund_a: str
+    fund_b: str
+    overlap_percent: float
+    common_stocks: list[str]
+
+class MFXRayResult(BaseModel):
+    total_invested: float
+    total_current_value: float
+    overall_xirr: Optional[float] = None
+    absolute_return_pct: float
+    holdings: list[MFHolding]
+    overlapping_pairs: list[OverlapPair]
+    category_breakdown: dict[str, float]
+    high_expense_funds: list[str]
+    rebalancing_suggestions: list[str]
+
+
+# Chat
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str
+    feature_context: Optional[str] = None
+
+class ChatResponse(BaseModel):
+    session_id: str
+    reply: str
+
+
+# Shared advice
 class AgentAdvice(BaseModel):
     summary: str
     key_actions: list[str]
@@ -211,14 +275,13 @@ class AgentAdvice(BaseModel):
     regime_suggestion: Optional[str] = None
 
 
-# API response envelopes
+# API envelopes
 class HealthScoreResponse(BaseModel):
     session_id: str
     profile: UserProfile
     result: MoneyHealthResult
     advice: AgentAdvice
     decision_log: list[dict]
-
 
 class FIREPlanResponse(BaseModel):
     session_id: str
@@ -227,7 +290,6 @@ class FIREPlanResponse(BaseModel):
     advice: AgentAdvice
     decision_log: list[dict]
 
-
 class TaxWizardResponse(BaseModel):
     session_id: str
     profile: UserProfile
@@ -235,6 +297,23 @@ class TaxWizardResponse(BaseModel):
     advice: AgentAdvice
     decision_log: list[dict]
 
+class LifeEventResponse(BaseModel):
+    session_id: str
+    result: LifeEventResult
+    advice: AgentAdvice
+    decision_log: list[dict]
+
+class CoupleResponse(BaseModel):
+    session_id: str
+    result: CoupleOptimisation
+    advice: AgentAdvice
+    decision_log: list[dict]
+
+class MFXRayResponse(BaseModel):
+    session_id: str
+    result: MFXRayResult
+    advice: AgentAdvice
+    decision_log: list[dict]
 
 class ErrorResponse(BaseModel):
     error: str

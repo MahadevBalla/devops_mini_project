@@ -1,164 +1,128 @@
 """
 finance/tax.py
-India Tax Wizard — FY 2025-26 (AY 2026-27).
-Old regime vs New regime comparison, missing deductions analysis.
-Pure deterministic. No LLM.
+India Tax Wizard — old vs new regime comparison, missing deductions analysis.
+All statutory constants imported from finance.tax_constants — NOTHING hardcoded here.
 """
-
 from __future__ import annotations
 
-from core.config import settings
+from finance.tax_constants import CURRENT as TAX
+from finance.tax_constants import IndiaFiscalYearConstants
 from models.schemas import TaxDeductions, TaxRegime, TaxRegimeComparison, UserProfile
 
 
-# Tax slab helpers
-def _apply_slabs(taxable: float, slabs: list[tuple[float, float]]) -> float:
-    """
-    Apply progressive tax slabs.
-    slabs: list of (upper_limit, rate) where upper_limit=inf means no cap.
-    """
+def _apply_slabs(taxable: float, constants: IndiaFiscalYearConstants, regime: TaxRegime) -> float:
+    slabs = constants.old_slabs if regime == TaxRegime.OLD else constants.new_slabs
     tax = 0.0
-    prev = 0.0
-    for upper, rate in slabs:
-        if taxable <= prev:
+    for slab in slabs:
+        if taxable <= slab.lower:
             break
-        band = min(taxable, upper) - prev
-        tax += band * rate
-        prev = upper
+        band = min(taxable, slab.upper) - slab.lower
+        tax += band * slab.rate
     return max(tax, 0.0)
 
 
-def _surcharge(income: float, base_tax: float, regime: TaxRegime) -> float:
-    """Surcharge for super-rich — simplified (marginal relief ignored)."""
-    if income <= 50_00_000:
-        return 0.0
-    if income <= 1_00_00_000:
-        return base_tax * 0.10
-    if income <= 2_00_00_000:
-        return base_tax * 0.15
-    if income <= 5_00_00_000:
-        return base_tax * 0.25
-    return base_tax * 0.37 if regime == TaxRegime.OLD else base_tax * 0.25
+def _apply_rebate(taxable: float, base_tax: float, regime: TaxRegime, constants: IndiaFiscalYearConstants) -> float:
+    if regime == TaxRegime.OLD:
+        if taxable <= constants.old_rebate_limit:
+            return max(0.0, base_tax - min(base_tax, constants.old_rebate_max))
+    else:
+        if taxable <= constants.new_rebate_limit:
+            return max(0.0, base_tax - min(base_tax, constants.new_rebate_max))
+    return base_tax
 
 
-def _cess(tax_plus_surcharge: float) -> float:
-    return tax_plus_surcharge * 0.04  # Health & Education Cess
+def _apply_surcharge(income: float, base_tax: float, regime: TaxRegime, constants: IndiaFiscalYearConstants) -> float:
+    thresholds = constants.surcharge_old if regime == TaxRegime.OLD else constants.surcharge_new
+    for t in reversed(thresholds):
+        if income > t.lower:
+            return base_tax * t.rate
+    return 0.0
 
 
-# OLD REGIME
-_OLD_SLABS = [
-    (2_50_000, 0.00),
-    (5_00_000, 0.05),
-    (10_00_000, 0.20),
-    (float("inf"), 0.30),
-]
+def _total_tax(taxable: float, gross: float, regime: TaxRegime, constants: IndiaFiscalYearConstants) -> float:
+    base = _apply_slabs(taxable, constants, regime)
+    after_rebate = _apply_rebate(taxable, base, regime, constants)
+    surcharge = _apply_surcharge(gross, after_rebate, regime, constants)
+    return after_rebate + surcharge + (after_rebate + surcharge) * constants.cess_rate
 
 
-def _old_regime_deductions(deductions: TaxDeductions) -> float:
-    """Total eligible deductions under old regime."""
-    return (
-        settings.STANDARD_DEDUCTION_OLD
-        + deductions.section_80c
-        + deductions.section_80d_self
-        + deductions.section_80d_parents
-        + deductions.nps_80ccd_1b
+def _old_taxable(gross: float, deductions: TaxDeductions, constants: IndiaFiscalYearConstants) -> float:
+    total = (
+        constants.standard_deduction_old
+        + min(deductions.section_80c, constants.sec_80c_limit)
+        + min(deductions.section_80d_self, constants.sec_80d_self_limit)
+        + min(deductions.section_80d_parents, constants.sec_80d_parents_limit)
+        + min(deductions.nps_80ccd_1b, constants.nps_80ccd_1b_limit)
         + deductions.hra_claimed
-        + deductions.home_loan_interest
+        + min(deductions.home_loan_interest, constants.home_loan_interest_limit)
         + deductions.other_deductions
     )
+    return max(gross - total, 0.0)
 
 
-def compute_old_regime_tax(gross_income: float, deductions: TaxDeductions) -> float:
-    total_deductions = _old_regime_deductions(deductions)
-    taxable = max(gross_income - total_deductions, 0.0)
-    base = _apply_slabs(taxable, _OLD_SLABS)
-
-    # Rebate u/s 87A: full rebate if taxable ≤ 5L
-    if taxable <= 5_00_000:
-        base = 0.0
-
-    surcharge = _surcharge(gross_income, base, TaxRegime.OLD)
-    return base + surcharge + _cess(base + surcharge)
+def _new_taxable(gross: float, constants: IndiaFiscalYearConstants) -> float:
+    return max(gross - constants.standard_deduction_new, 0.0)
 
 
-# NEW REGIME (FY 2025-26)
-_NEW_SLABS = [
-    (3_00_000, 0.00),
-    (7_00_000, 0.05),
-    (10_00_000, 0.10),
-    (12_00_000, 0.15),
-    (15_00_000, 0.20),
-    (float("inf"), 0.30),
-]
+def compute_old_regime_tax(gross: float, deductions: TaxDeductions, constants: IndiaFiscalYearConstants = TAX) -> float:
+    taxable = _old_taxable(gross, deductions, constants)
+    return round(_total_tax(taxable, gross, TaxRegime.OLD, constants), 2)
 
 
-def compute_new_regime_tax(gross_income: float) -> float:
-    taxable = max(gross_income - settings.STANDARD_DEDUCTION_NEW, 0.0)
-    base = _apply_slabs(taxable, _NEW_SLABS)
-
-    # Rebate u/s 87A: full rebate if taxable ≤ 7L
-    if taxable <= 7_00_000:
-        base = 0.0
-
-    surcharge = _surcharge(gross_income, base, TaxRegime.NEW)
-    return base + surcharge + _cess(base + surcharge)
+def compute_new_regime_tax(gross: float, constants: IndiaFiscalYearConstants = TAX) -> float:
+    taxable = _new_taxable(gross, constants)
+    return round(_total_tax(taxable, gross, TaxRegime.NEW, constants), 2)
 
 
-# Missing deductions analysis
-def analyse_missing_deductions(deductions: TaxDeductions) -> tuple[list[str], float]:
-    """
-    Returns (list of missing deduction labels, total potential deduction amount).
-    """
-    missing = []
+def analyse_missing_deductions(
+    deductions: TaxDeductions, constants: IndiaFiscalYearConstants = TAX
+) -> tuple[list[str], float]:
+    missing: list[str] = []
     potential = 0.0
 
-    unused_80c = 150_000 - deductions.section_80c
+    unused_80c = constants.sec_80c_limit - deductions.section_80c
     if unused_80c > 0:
-        missing.append(f"Section 80C: ₹{unused_80c:,.0f} unused (PPF, ELSS, EPF, LIC)")
+        missing.append(f"Section 80C: ₹{unused_80c:,.0f} unused — PPF, ELSS, EPF top-up, LIC premium")
         potential += unused_80c
 
-    if deductions.section_80d_self < 25_000:
-        gap = 25_000 - deductions.section_80d_self
-        missing.append(f"Section 80D (self health): ₹{gap:,.0f} unused")
-        potential += gap
+    unused_80d_self = constants.sec_80d_self_limit - deductions.section_80d_self
+    if unused_80d_self > 0:
+        missing.append(f"Section 80D (self/family health): ₹{unused_80d_self:,.0f} unused")
+        potential += unused_80d_self
 
-    if deductions.nps_80ccd_1b < 50_000:
-        gap = 50_000 - deductions.nps_80ccd_1b
-        missing.append(
-            f"NPS 80CCD(1B): ₹{gap:,.0f} unused (additional NPS contribution)"
-        )
-        potential += gap
+    unused_80d_parents = constants.sec_80d_parents_limit - deductions.section_80d_parents
+    if unused_80d_parents > 0:
+        missing.append(f"Section 80D (parents' health): ₹{unused_80d_parents:,.0f} unused")
+        potential += unused_80d_parents
+
+    unused_nps = constants.nps_80ccd_1b_limit - deductions.nps_80ccd_1b
+    if unused_nps > 0:
+        missing.append(f"NPS 80CCD(1B): ₹{unused_nps:,.0f} unused — additional NPS over 80C limit")
+        potential += unused_nps
 
     if deductions.hra_claimed == 0:
-        missing.append("HRA exemption not claimed — if paying rent, provide documents")
+        missing.append("HRA: not claimed — submit rent receipts to employer if paying rent")
 
     if deductions.home_loan_interest == 0:
-        missing.append(
-            "Section 24(b): home loan interest up to ₹2L deductible if applicable"
-        )
+        missing.append(f"Sec 24(b): home loan interest up to ₹{constants.home_loan_interest_limit:,.0f} deductible")
 
-    return missing, potential
+    return missing, round(potential, 0)
 
 
-# Main entry point
-def compare_tax_regimes(profile: UserProfile) -> TaxRegimeComparison:
+def compare_tax_regimes(profile: UserProfile, constants: IndiaFiscalYearConstants = TAX) -> TaxRegimeComparison:
     gross = profile.annual_gross_income
-    old_tax = compute_old_regime_tax(gross, profile.tax_deductions)
-    new_tax = compute_new_regime_tax(gross)
-
+    old_tax = compute_old_regime_tax(gross, profile.tax_deductions, constants)
+    new_tax = compute_new_regime_tax(gross, constants)
     recommended = TaxRegime.OLD if old_tax < new_tax else TaxRegime.NEW
-    savings = abs(new_tax - old_tax)
-
-    missing, potential = analyse_missing_deductions(profile.tax_deductions)
-
+    missing, potential = analyse_missing_deductions(profile.tax_deductions, constants)
     return TaxRegimeComparison(
         gross_income=gross,
-        old_regime_tax=round(old_tax, 0),
-        new_regime_tax=round(new_tax, 0),
+        old_regime_tax=old_tax,
+        new_regime_tax=new_tax,
         recommended_regime=recommended,
-        savings_by_switching=round(savings, 0),
+        savings_by_switching=round(abs(new_tax - old_tax), 0),
         effective_rate_old=round(old_tax / gross * 100, 2) if gross > 0 else 0.0,
         effective_rate_new=round(new_tax / gross * 100, 2) if gross > 0 else 0.0,
         missing_deductions=missing,
-        deduction_potential=round(potential, 0),
+        deduction_potential=potential,
     )

@@ -1,25 +1,19 @@
 """
-core/config.py
-Central configuration — all env vars loaded once here.
+core/config.py — All env vars loaded once here.
 Import `settings` everywhere; never read os.environ directly.
 """
-
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    # App
     APP_NAME: str = "AI Money Mentor"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
 
-    # CORS — comma-separated origins
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # Database
@@ -38,14 +32,20 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3-flash-preview"
 
-    # Finance defaults (India-specific)
-    DEFAULT_INFLATION_RATE: float = 0.06  # 6% p.a.
-    DEFAULT_EQUITY_RETURN: float = 0.12  # 12% p.a.
-    DEFAULT_DEBT_RETURN: float = 0.07  # 7% p.a.
-    DEFAULT_SAFE_WITHDRAWAL_RATE: float = 0.04  # 4% SWR
+    # Sarvam AI — voice
+    SARVAM_API_KEY: str = ""
+    SARVAM_DEFAULT_VOICE: str = "meera"
+    SARVAM_DEFAULT_LANGUAGE: str = "en-IN"
+    SARVAM_TTS_PACE: float = 1.0
+    SARVAM_TTS_SAMPLE_RATE: int = 22050
+
+    # Economic assumptions
+    DEFAULT_INFLATION_RATE: float = 0.06
+    DEFAULT_EQUITY_RETURN: float = 0.12
+    DEFAULT_DEBT_RETURN: float = 0.07
+    DEFAULT_SAFE_WITHDRAWAL_RATE: float = 0.04
+    DEFAULT_STEPUP_RATE: float = 0.10
     EMERGENCY_FUND_MONTHS: int = 6
-    STANDARD_DEDUCTION_NEW: int = 75_000  # FY 2025-26
-    STANDARD_DEDUCTION_OLD: int = 50_000
 
     @property
     def cors_origins(self) -> list[str]:
