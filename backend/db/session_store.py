@@ -19,6 +19,9 @@ from core.config import settings
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
+# Truncation limit as a named module-level constant
+_MAX_LOG_CHARS = 10_000
+
 
 # ORM models
 class Base(DeclarativeBase):
@@ -29,9 +32,7 @@ class Session(Base):
     __tablename__ = "sessions"
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    feature = Column(
-        String(64), nullable=False
-    )  # health_score | fire_planner | tax_wizard
+    feature = Column(String(64), nullable=False)
     state_json = Column(Text, default="{}")
 
 
@@ -83,8 +84,9 @@ async def append_log(
             session_id=session_id,
             agent_name=agent_name,
             step=step,
-            input_json=json.dumps(input_data, default=str)[:10_000],
-            output_json=json.dumps(output_data, default=str)[:10_000],
+            # Use _MAX_LOG_CHARS constant instead of bare 10_000
+            input_json=json.dumps(input_data, default=str)[:_MAX_LOG_CHARS],
+            output_json=json.dumps(output_data, default=str)[:_MAX_LOG_CHARS],
         )
         db.add(log)
         await db.commit()
@@ -94,9 +96,7 @@ async def append_log(
 async def get_session_logs(session_id: str) -> list[dict]:
     async with AsyncSessionLocal() as db:
         result = await db.execute(
-            select(AgentLog)
-            .where(AgentLog.session_id == session_id)
-            .order_by(AgentLog.timestamp)
+            select(AgentLog).where(AgentLog.session_id == session_id).order_by(AgentLog.timestamp)
         )
         logs = result.scalars().all()
         return [

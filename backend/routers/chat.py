@@ -5,6 +5,7 @@ GET  /api/chat/stream   — SSE streaming response
 
 Multi-turn conversation: history stored in DB session, sent with every LLM call.
 """
+
 from __future__ import annotations
 
 import json
@@ -23,6 +24,8 @@ from models.schemas import ChatRequest, ChatResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])
 
+_MAX_HISTORY_TURNS = 10
+
 _SYSTEM_PROMPT = """You are an AI Money Mentor embedded in the Economic Times — India's leading financial newspaper.
 
 Your persona:
@@ -40,55 +43,68 @@ Hard rules:
 """
 
 
-async def _get_session_history(session_id: str) -> list[dict]:
-    """Load chat history from agent_logs for this session."""
+async def _get_chat_context(session_id: str) -> tuple[list[dict], str]:
+    """
+    Returns (history, context_suffix) in a single DB transaction.
+
+    history        — last N user+assistant message pairs, chronological order.
+    context_suffix — stringified session state_json for system prompt injection.
+    """
     async with AsyncSessionLocal() as db:
-        result = await db.execute(
+        # Fetch most-recent N log rows (DESC), then reverse to restore chronology
+        log_result = await db.execute(
             select(AgentLog)
             .where(AgentLog.session_id == session_id)
             .where(AgentLog.agent_name == "ChatAgent")
-            .order_by(AgentLog.timestamp)
+            .order_by(AgentLog.timestamp.desc())
+            .limit(_MAX_HISTORY_TURNS)
         )
-        logs = result.scalars().all()
-        history = []
-        for log in logs:
-            try:
-                inp = json.loads(log.input_json)
-                out = json.loads(log.output_json)
-                if inp.get("role") and inp.get("content"):
-                    history.append({"role": inp["role"], "content": inp["content"]})
-                if out.get("role") and out.get("content"):
-                    history.append({"role": out["role"], "content": out["content"]})
-            except Exception:
-                pass
+        logs = list(reversed(log_result.scalars().all()))
+
+        # Fetch session state in the same open transaction — no second round-trip
+        sess_result = await db.execute(select(Session).where(Session.id == session_id))
+        session = sess_result.scalar_one_or_none()
+
+    history = _parse_logs_to_history(logs)
+    context_suffix = _parse_state_to_context(session)
+    return history, context_suffix
+
+
+def _parse_logs_to_history(logs: list) -> list[dict]:
+    history = []
+    for log in logs:
+        try:
+            inp = json.loads(log.input_json)
+            out = json.loads(log.output_json)
+            if inp.get("role") and inp.get("content"):
+                history.append({"role": inp["role"], "content": inp["content"]})
+            if out.get("role") and out.get("content"):
+                history.append({"role": out["role"], "content": out["content"]})
+        except Exception:
+            pass
     return history
 
 
-async def _get_feature_context(session_id: str) -> str:
-    """Pull feature result summary from session state_json for context injection."""
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(
-            select(Session).where(Session.id == session_id)
-        )
-        session = result.scalar_one_or_none()
-        if session and session.state_json and session.state_json != "{}":
-            try:
-                state = json.loads(session.state_json)
-                return f"\n\n[User's financial context from this session: {json.dumps(state)[:800]}]"
-            except Exception:
-                pass
+def _parse_state_to_context(session: Session | None) -> str:
+    if session and session.state_json and session.state_json != "{}":
+        try:
+            state = json.loads(session.state_json)
+            return f"\n\n[User's financial context from this session: {json.dumps(state)[:800]}]"
+        except Exception:
+            pass
     return ""
 
 
 @router.post("/chat")
 async def chat(req: ChatRequest) -> ChatResponse:
-    history = await _get_session_history(req.session_id)
-    context_suffix = await _get_feature_context(req.session_id)
+    history, context_suffix = await _get_chat_context(req.session_id)
 
     system = _SYSTEM_PROMPT + context_suffix
-    messages = [{"role": "system", "content": system}] + history + [
-        {"role": "user", "content": req.message}
-    ]
+    messages = (
+        [{"role": "system", "content": system}]
+        + history
+        + [{"role": "user", "content": req.message}]
+    )
 
     try:
         reply = await chat_completion(messages)
@@ -100,7 +116,9 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     # Persist both turns
     await append_log(
-        req.session_id, "ChatAgent", "user_message",
+        req.session_id,
+        "ChatAgent",
+        "user_message",
         {"role": "user", "content": req.message},
         {"role": "assistant", "content": reply},
     )
@@ -125,17 +143,15 @@ async def chat_stream(session_id: str, message: str) -> StreamingResponse:
 
 
 async def _stream_reply(session_id: str, message: str) -> AsyncGenerator[str, None]:
-    history = await _get_session_history(session_id)
-    context_suffix = await _get_feature_context(session_id)
+    history, context_suffix = await _get_chat_context(session_id)
     system = _SYSTEM_PROMPT + context_suffix
 
-    messages = [{"role": "system", "content": system}] + history + [
-        {"role": "user", "content": message}
-    ]
+    messages = (
+        [{"role": "system", "content": system}] + history + [{"role": "user", "content": message}]
+    )
 
     full_reply = ""
     try:
-        # Groq supports streaming — use httpx streaming
         import httpx
 
         from core.config import settings
@@ -183,9 +199,10 @@ async def _stream_reply(session_id: str, message: str) -> AsyncGenerator[str, No
 
     yield f"data: {json.dumps({'done': True})}\n\n"
 
-    # Persist after full reply assembled
     await append_log(
-        session_id, "ChatAgent", "user_message_stream",
+        session_id,
+        "ChatAgent",
+        "user_message_stream",
         {"role": "user", "content": message},
         {"role": "assistant", "content": full_reply},
     )

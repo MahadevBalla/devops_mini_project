@@ -3,6 +3,7 @@ agents/couple_agent.py
 LLM narrative layer for couple joint finance optimisation.
 Numbers from finance/couple.py — LLM adds the 'why' and prioritisation.
 """
+
 from __future__ import annotations
 
 import logging
@@ -66,7 +67,7 @@ Married: {couple.is_married}
 COMPUTED RESULTS (use these exact numbers in key_actions):
 - Combined net worth:      ₹{result.combined_net_worth:,.0f}
 - Combined monthly surplus: ₹{result.combined_monthly_surplus:,.0f}/mo
-- Better HRA claimant:     {result.better_hra_claimant.replace('_', ' ').title()} → ₹{result.hra_savings:,.0f}/yr saved
+- Better HRA claimant:     {result.better_hra_claimant.replace("_", " ").title()} → ₹{result.hra_savings:,.0f}/yr saved
 - NPS benefit (both max):  ₹{result.nps_matching_benefit:,.0f}/yr
 - Recommended SIPs:        Partner A ₹{result.partner_a_sip:,.0f}/mo | Partner B ₹{result.partner_b_sip:,.0f}/mo
 - Joint tax saving:        ₹{result.joint_tax_saving:,.0f}/yr
@@ -76,7 +77,7 @@ Generate the JSON now. key_actions must be flat strings, not objects."""
 
     messages = [
         {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user",   "content": user_prompt},
+        {"role": "user", "content": user_prompt},
     ]
 
     try:
@@ -84,7 +85,7 @@ Generate the JSON now. key_actions must be flat strings, not objects."""
 
         # Defensive coerce — handles malformed LLM output
         key_actions = _flatten(data.get("key_actions", []))
-        risks       = _flatten(data.get("risks", []))
+        risks = _flatten(data.get("risks", []))
 
         # Final fallback if LLM returned empty lists
         if not key_actions:
@@ -97,7 +98,10 @@ Generate the JSON now. key_actions must be flat strings, not objects."""
             ]
 
         return AgentAdvice(
-            summary=data.get("summary", f"Combined surplus ₹{result.combined_monthly_surplus:,.0f}/mo with ₹{result.joint_tax_saving:,.0f}/yr in available tax savings."),
+            summary=data.get(
+                "summary",
+                f"Combined surplus ₹{result.combined_monthly_surplus:,.0f}/mo with ₹{result.joint_tax_saving:,.0f}/yr in available tax savings.",
+            ),
             key_actions=key_actions,
             risks=risks,
             disclaimer=data.get("disclaimer", _DISCLAIMER),

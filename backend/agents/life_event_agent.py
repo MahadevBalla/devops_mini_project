@@ -3,6 +3,7 @@ agents/life_event_agent.py
 LLM narrative layer for life event planning.
 Numbers come from finance/life_event.py — LLM only adds context and empathy.
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,10 +19,10 @@ _DISCLAIMER = "Educational guidance only — not SEBI-registered advice. Consult
 
 async def generate_life_event_advice(profile: UserProfile, result: LifeEventResult) -> AgentAdvice:
     event_name = result.event_type.value.replace("_", " ").title()
-    allocations_text = "\n".join(
-        f"  - {a.category}: ₹{a.amount:,.0f} — {a.rationale}"
-        for a in result.allocations
-    ) or "  - See priority actions below"
+    allocations_text = (
+        "\n".join(f"  - {a.category}: ₹{a.amount:,.0f} — {a.rationale}" for a in result.allocations)
+        or "  - See priority actions below"
+    )
 
     prompt = f"""You are an AI Money Mentor for India. Provide warm, actionable advice for a life event.
 
@@ -42,7 +43,10 @@ Respond with JSON keys: summary, key_actions, risks, disclaimer
 """
 
     messages = [
-        {"role": "system", "content": "You are an AI Money Mentor for Indian personal finance. Reply only with valid JSON."},
+        {
+            "role": "system",
+            "content": "You are an AI Money Mentor for Indian personal finance. Reply only with valid JSON.",
+        },
         {"role": "user", "content": prompt},
     ]
 

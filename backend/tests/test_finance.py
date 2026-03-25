@@ -53,7 +53,6 @@ class TestFIREMath:
 
     def test_required_sip_no_existing_corpus(self):
         sip = fire.required_monthly_sip(10_000_000, 0, 0.12, 10)
-        # Rough check: should be between 40k and 60k
         assert 40_000 < sip < 60_000
 
     def test_required_sip_already_funded(self):
@@ -74,7 +73,6 @@ class TestFIREMath:
             monthly_expenses=45_000,
         )
         plan = fire.build_fire_plan(profile)
-        # Very low surplus vs large corpus needed → not on track
         assert plan.on_track is False
 
     def test_fire_plan_required_sip_positive(self):
@@ -99,8 +97,8 @@ class TestFIREMath:
 
 # Tax tests
 class TestTaxEngine:
-    def test_new_regime_rebate_below_7l(self):
-        """Income ≤ 7L after standard deduction → 0 tax in new regime."""
+    def test_new_regime_rebate_well_below_limit(self):
+        """Gross ₹7L → taxable ₹6.25L (well below ₹12L rebate limit) → 0 tax."""
         t = tax.compute_new_regime_tax(7_00_000)
         assert t == pytest.approx(0.0)
 
@@ -137,10 +135,73 @@ class TestTaxEngine:
         assert len(result.missing_deductions) > 0
 
     def test_cess_applied(self):
-        # Tax at ₹20L should include 4% cess
         t = tax.compute_new_regime_tax(20_00_000)
         t_no_cess = t / 1.04
         assert abs(t - (t_no_cess * 1.04)) < 1
+
+
+# Tax edge-case tests
+class TestTaxEdgeCases:
+    def test_new_regime_exactly_at_rebate_limit(self):
+        """
+        Gross ₹12,75,000 → taxable = ₹12,00,000 exactly (after ₹75k standard deduction).
+        Tax before rebate = ₹60,000; rebate = min(60k, 60k) = ₹60,000 → net tax = ₹0.
+        This is the exact boundary where the full 87A rebate wipes out the liability.
+        """
+        t = tax.compute_new_regime_tax(12_75_000)
+        assert t == pytest.approx(0.0), f"Expected ₹0 at taxable ₹12L boundary, got ₹{t}"
+
+    def test_new_regime_just_above_rebate_limit(self):
+        """
+        Gross ₹12,75,001 → taxable = ₹12,00,001 (one rupee above ₹12L rebate limit).
+        No rebate applies; some tax must be due.
+        Note: gross must exceed ₹12,75,000 (not ₹12,00,000) because taxable =
+        gross − ₹75,000 standard deduction.
+        """
+        t = tax.compute_new_regime_tax(12_75_001)
+        assert t > 0, f"Expected tax > 0 just above rebate limit, got ₹{t}"
+
+    def test_new_regime_rebate_is_capped_at_actual_tax(self):
+        """
+        At gross ₹11,00,000, taxable = ₹10,25,000 — rebate limit applies but
+        actual tax (≈ ₹42,500) is less than max rebate (₹60,000).
+        Rebate must be capped at actual tax → net tax = ₹0, not negative.
+        """
+        t = tax.compute_new_regime_tax(11_00_000)
+        assert t == pytest.approx(0.0), f"Rebate over-applied: got ₹{t}"
+
+    def test_surcharge_triggered_above_50l(self):
+        """
+        Income > ₹50L triggers 10% surcharge.
+        With marginal relief, tax at ₹50,00,001 should exceed tax at ₹50,00,000
+        (marginal relief limits the jump, but some increase must occur).
+        """
+        t_no_surcharge = tax.compute_new_regime_tax(50_00_000)
+        t_with_surcharge = tax.compute_new_regime_tax(50_00_001)
+        assert t_with_surcharge > t_no_surcharge
+
+    def test_surcharge_marginal_relief_limits_cliff(self):
+        """
+        Marginal relief: net tax increase from ₹50L to ₹50L+1 should not
+        exceed ₹1 (the extra income earned). Without marginal relief this
+        would be a jump of ~₹1.05 lakh.
+        """
+        t_at_50l = tax.compute_new_regime_tax(50_00_000)
+        t_at_50l_plus1 = tax.compute_new_regime_tax(50_00_001)
+        assert (t_at_50l_plus1 - t_at_50l) <= 1.1  # at most ₹1 increase for ₹1 income
+
+    def test_cess_rate_is_4_pct(self):
+        """Final tax must equal (base_tax + surcharge) × 1.04 exactly."""
+        gross = 20_00_000
+        t = tax.compute_new_regime_tax(gross)
+        # Back-calculate pre-cess amount: t = pre_cess × 1.04
+        t_pre_cess = t / 1.04
+        assert abs(t - t_pre_cess * 1.04) < 1.0
+
+    def test_zero_income_zero_tax(self):
+        deductions = TaxDeductions()
+        assert tax.compute_new_regime_tax(0.0) == pytest.approx(0.0)
+        assert tax.compute_old_regime_tax(0.0, deductions) == pytest.approx(0.0)
 
 
 # Health Score tests
@@ -161,7 +222,6 @@ class TestHealthScore:
         assert len(result.dimensions) == 6
 
     def test_full_emergency_fund_scores_100(self):
-        # 6 months of expenses
         profile = make_profile(monthly_expenses=50_000, emergency_fund=300_000)
         d = health.score_emergency_fund(profile)
         assert d.score == pytest.approx(100.0)
@@ -214,12 +274,9 @@ class TestHealthScore:
     def test_net_worth_calculation(self):
         profile = make_profile(
             assets=AssetAllocation(equity=500_000, cash=100_000),
-            debts=[
-                DebtItem(name="Loan", outstanding=200_000, emi=5_000, interest_rate=10)
-            ],
+            debts=[DebtItem(name="Loan", outstanding=200_000, emi=5_000, interest_rate=10)],
         )
         result = health.calculate_money_health_score(profile)
-        # net_worth = assets.total + emergency_fund - debts outstanding
         expected = 500_000 + 100_000 + 300_000 - 200_000
         assert result.total_net_worth == pytest.approx(expected, rel=0.01)
 

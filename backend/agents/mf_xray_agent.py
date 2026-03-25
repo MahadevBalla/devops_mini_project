@@ -3,6 +3,7 @@ agents/mf_xray_agent.py
 LLM narrative layer for MF portfolio X-Ray.
 Rebalancing logic from finance/mf_xray.py — LLM explains the 'why'.
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,8 +20,12 @@ _DISCLAIMER = "Educational guidance only — not SEBI-registered advice. Past re
 async def generate_mf_xray_advice(result: MFXRayResult) -> AgentAdvice:
     xirr_text = f"{result.overall_xirr:.1f}%" if result.overall_xirr is not None else "N/A"
     categories = (
-        ", ".join(f"{k}: {v / result.total_current_value * 100:.0f}%" for k, v in result.category_breakdown.items())
-        if result.total_current_value > 0 else "No holdings"
+        ", ".join(
+            f"{k}: {v / result.total_current_value * 100:.0f}%"
+            for k, v in result.category_breakdown.items()
+        )
+        if result.total_current_value > 0
+        else "No holdings"
     )
 
     prompt = f"""You are an AI Money Mentor reviewing an Indian investor's mutual fund portfolio.
@@ -43,7 +48,10 @@ Respond with JSON keys: summary, key_actions, risks, disclaimer
 """
 
     messages = [
-        {"role": "system", "content": "You are an AI Money Mentor specialising in Indian mutual funds. Reply only with valid JSON."},
+        {
+            "role": "system",
+            "content": "You are an AI Money Mentor specialising in Indian mutual funds. Reply only with valid JSON.",
+        },
         {"role": "user", "content": prompt},
     ]
 
@@ -59,7 +67,8 @@ Respond with JSON keys: summary, key_actions, risks, disclaimer
         logger.warning("LLM unavailable — fallback MF X-Ray advice")
         return AgentAdvice(
             summary=f"Portfolio of ₹{result.total_current_value:,.0f} across {len(result.holdings)} funds with {result.absolute_return_pct:.1f}% absolute return.",
-            key_actions=result.rebalancing_suggestions or ["Review fund overlap and consider consolidation"],
+            key_actions=result.rebalancing_suggestions
+            or ["Review fund overlap and consider consolidation"],
             risks=[
                 "Fund overlap reduces true diversification benefit",
                 "High expense ratios compound into significant drag over time",

@@ -43,8 +43,7 @@ async def run_intake_agent(raw_data: dict) -> tuple[UserProfile, list[str]]:
             {
                 "role": "user",
                 "content": (
-                    "Validate and complete this profile JSON:\n\n"
-                    + json.dumps(raw_data, indent=2)
+                    "Validate and complete this profile JSON:\n\n" + json.dumps(raw_data, indent=2)
                 ),
             },
         ]

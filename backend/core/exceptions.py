@@ -33,6 +33,4 @@ class LLMUnavailableError(AgentError):
     """Raised when Groq/LLM API is down — triggers graceful degradation."""
 
     def __init__(self):
-        super().__init__(
-            "LLM service temporarily unavailable. Returning deterministic results."
-        )
+        super().__init__("LLM service temporarily unavailable. Returning deterministic results.")

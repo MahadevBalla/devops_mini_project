@@ -2,6 +2,7 @@
 core/config.py — All env vars loaded once here.
 Import `settings` everywhere; never read os.environ directly.
 """
+
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,7 +21,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./money_mentor.db"
 
     # LLM provider selection
-    LLM_PROVIDER: str = "groq"            # "groq" | "gemini"
+    LLM_PROVIDER: str = "groq"  # "groq" | "gemini"
 
     # Groq
     GROQ_API_KEY: str = ""
@@ -47,9 +48,12 @@ class Settings(BaseSettings):
     DEFAULT_STEPUP_RATE: float = 0.10
     EMERGENCY_FUND_MONTHS: int = 6
 
+    # Filter empty strings produced by trailing commas in ALLOWED_ORIGINS
+    # Without the `if o.strip()` guard, CORSMiddleware receives an empty-string
+    # origin which matches every request, silently bypassing CORS policy.
     @property
     def cors_origins(self) -> list[str]:
-        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",")]
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 
 @lru_cache(maxsize=1)

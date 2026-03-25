@@ -40,12 +40,11 @@ logger = logging.getLogger("main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    logger.info(
-        "Database initialised. %s v%s ready.", settings.APP_NAME, settings.APP_VERSION
-    )
+    logger.info("Database initialised. %s v%s ready.", settings.APP_NAME, settings.APP_VERSION)
     yield
     # Cleanup on shutdown (add DB pool dispose here, when we move to Postgres)
     logger.info("Shutting down.")
+
 
 # App
 app = FastAPI(

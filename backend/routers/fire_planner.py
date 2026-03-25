@@ -91,15 +91,9 @@ async def fire_planner(raw_data: dict) -> FIREPlanResponse:
         )
 
     except ValidationError as e:
-        raise HTTPException(
-            status_code=422, detail={"error": e.message, "code": e.code}
-        )
+        raise HTTPException(status_code=422, detail={"error": e.message, "code": e.code})
     except MoneyMentorError as e:
-        raise HTTPException(
-            status_code=500, detail={"error": e.message, "code": e.code}
-        )
+        raise HTTPException(status_code=500, detail={"error": e.message, "code": e.code})
     except Exception as e:
         logger.exception("Unexpected error in fire_planner")
-        raise HTTPException(
-            status_code=500, detail={"error": str(e), "code": "INTERNAL_ERROR"}
-        )
+        raise HTTPException(status_code=500, detail={"error": str(e), "code": "INTERNAL_ERROR"})

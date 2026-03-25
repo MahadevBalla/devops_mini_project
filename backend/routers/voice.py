@@ -3,6 +3,7 @@ routers/voice.py
 POST /api/voice/stt   — audio file → transcript (Sarvam Saaras)
 POST /api/voice/tts   — text → WAV audio bytes (Sarvam Bulbul)
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,10 +17,17 @@ from core.voice import SARVAM_VOICES, speech_to_text, text_to_speech
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
-_MAX_AUDIO_SIZE = 10 * 1024 * 1024     # 10 MB
+_MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-@router.post("/stt", responses={413: {"description": "Audio file too large"}, 502: {"description": "Speech recognition failed"}, 503: {"description": "Voice service not configured"}})
+@router.post(
+    "/stt",
+    responses={
+        413: {"description": "Audio file too large"},
+        502: {"description": "Speech recognition failed"},
+        503: {"description": "Voice service not configured"},
+    },
+)
 async def stt(
     audio: UploadFile = File(..., description="WAV / MP3 / OGG audio file"),
     language_code: str = Form(default="en-IN"),
@@ -43,7 +51,14 @@ async def stt(
         raise HTTPException(502, detail="Speech recognition failed — please try again")
 
 
-@router.post("/tts", responses={400: {"description": "Invalid voice or text too long"}, 502: {"description": "Text-to-speech failed"}, 503: {"description": "Voice service not configured"}})
+@router.post(
+    "/tts",
+    responses={
+        400: {"description": "Invalid voice or text too long"},
+        502: {"description": "Text-to-speech failed"},
+        503: {"description": "Voice service not configured"},
+    },
+)
 async def tts(
     text: str = Form(...),
     voice: str = Form(default=settings.SARVAM_DEFAULT_VOICE),
@@ -57,7 +72,9 @@ async def tts(
         raise HTTPException(503, detail="Voice service not configured — set SARVAM_API_KEY")
 
     if voice not in SARVAM_VOICES:
-        raise HTTPException(400, detail=f"Unknown voice '{voice}'. Available: {list(SARVAM_VOICES.keys())}")
+        raise HTTPException(
+            400, detail=f"Unknown voice '{voice}'. Available: {list(SARVAM_VOICES.keys())}"
+        )
 
     if len(text) > 5000:
         raise HTTPException(400, detail="Text too long (max 5,000 characters)")

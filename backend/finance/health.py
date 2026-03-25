@@ -53,15 +53,11 @@ def score_emergency_fund(profile: UserProfile) -> DimensionScore:
 
     score = _clamp(ratio * 100)
     months_covered = (
-        profile.emergency_fund / profile.monthly_expenses
-        if profile.monthly_expenses > 0
-        else 0
+        profile.emergency_fund / profile.monthly_expenses if profile.monthly_expenses > 0 else 0
     )
 
     if ratio >= 1.0:
-        insight = (
-            f"Emergency fund covers {months_covered:.1f} months — you're fully covered."
-        )
+        insight = f"Emergency fund covers {months_covered:.1f} months — you're fully covered."
     else:
         shortfall = needed - profile.emergency_fund
         insight = (
@@ -88,9 +84,7 @@ def score_debt_health(profile: UserProfile) -> DimensionScore:
         if profile.monthly_gross_income > 0
         else 1.0
     )
-    has_high_interest = any(
-        d.interest_rate > 18 and not d.is_secured for d in profile.debts
-    )
+    has_high_interest = any(d.interest_rate > 18 and not d.is_secured for d in profile.debts)
 
     # EMI-to-income scoring: <20% = 100, 20-40% = 60, 40-60% = 30, >60% = 0
     if emi_ratio < 0.20:
@@ -109,9 +103,7 @@ def score_debt_health(profile: UserProfile) -> DimensionScore:
     pct = emi_ratio * 100
 
     insight = f"EMIs are {pct:.1f}% of income." + (
-        " High-interest unsecured debt detected — prioritise payoff."
-        if has_high_interest
-        else ""
+        " High-interest unsecured debt detected — prioritise payoff." if has_high_interest else ""
     )
 
     return DimensionScore(
@@ -139,7 +131,7 @@ def score_investment_diversification(assets: AssetAllocation) -> DimensionScore:
     # Too much cash is drag
     if cash_pct > 0.30:
         penalties += 25
-        flags.append(f"{cash_pct*100:.0f}% in cash is too high")
+        flags.append(f"{cash_pct * 100:.0f}% in cash is too high")
 
     # Equity overconcentration
     if equity_pct > 0.85:
@@ -157,11 +149,7 @@ def score_investment_diversification(assets: AssetAllocation) -> DimensionScore:
         flags.append("gold >20%")
 
     score = _clamp(100 - penalties)
-    insight = (
-        "Well-diversified portfolio."
-        if not flags
-        else "Issues: " + "; ".join(flags) + "."
-    )
+    insight = "Well-diversified portfolio." if not flags else "Issues: " + "; ".join(flags) + "."
     return DimensionScore(
         name="Diversification", score=score, label=_score_label(score), insight=insight
     )
@@ -182,15 +170,13 @@ def score_retirement_readiness(profile: UserProfile) -> DimensionScore:
             insight="Retirement corpus goal met.",
         )
 
-    projected = compound_growth_value(
-        current_corpus, settings.DEFAULT_EQUITY_RETURN, years
-    )
+    projected = compound_growth_value(current_corpus, settings.DEFAULT_EQUITY_RETURN, years)
     ratio = min(projected / corpus_needed, 1.0)
     score = _clamp(ratio * 100)
 
     insight = (
         f"Projected corpus ₹{projected:,.0f} vs. needed ₹{corpus_needed:,.0f} "
-        f"({ratio*100:.0f}% funded)."
+        f"({ratio * 100:.0f}% funded)."
     )
     return DimensionScore(
         name="Retirement Readiness",
@@ -224,11 +210,7 @@ def score_insurance_coverage(profile: UserProfile) -> DimensionScore:
         flags.append("health cover below ₹5L — consider topping up")
 
     score = _clamp(score)
-    insight = (
-        "Adequate insurance coverage."
-        if not flags
-        else "Gaps: " + "; ".join(flags) + "."
-    )
+    insight = "Adequate insurance coverage." if not flags else "Gaps: " + "; ".join(flags) + "."
     return DimensionScore(
         name="Insurance Coverage",
         score=score,

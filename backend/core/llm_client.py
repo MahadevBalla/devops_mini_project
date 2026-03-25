@@ -11,11 +11,15 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from functools import lru_cache
+from typing import Optional
 
 from core.config import settings
 from core.exceptions import LLMUnavailableError
 
 logger = logging.getLogger(__name__)
+
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 0.5  # seconds; doubles each attempt
 
 
 # Base contract
@@ -103,7 +107,6 @@ class GeminiProvider(BaseLLMProvider):
         from google.genai import types
         from google.genai.errors import APIError, ClientError
 
-        # Gemini separates system instruction from conversation turns
         system_instruction: str | None = None
         contents: list = []
 
@@ -111,7 +114,6 @@ class GeminiProvider(BaseLLMProvider):
             if msg["role"] == "system":
                 system_instruction = msg["content"]
             else:
-                # Gemini uses "model" instead of "assistant"
                 role = "user" if msg["role"] == "user" else "model"
                 contents.append(
                     types.Content(
@@ -157,9 +159,7 @@ def get_provider() -> BaseLLMProvider:
     name = settings.LLM_PROVIDER.lower()
     cls = _REGISTRY.get(name)
     if cls is None:
-        raise ValueError(
-            f"Unknown LLM provider '{name}'. Choose from: {list(_REGISTRY)}"
-        )
+        raise ValueError(f"Unknown LLM provider '{name}'. Choose from: {list(_REGISTRY)}")
     logger.info("LLM provider: %s", name)
     return cls()
 
@@ -172,18 +172,41 @@ async def chat_completion(
     max_tokens: int | None = None,
     json_mode: bool = False,
 ) -> str:
+    import asyncio
+
     provider = get_provider()
-    return await provider.complete(
-        messages,
-        temperature=(
-            temperature if temperature is not None else settings.GROQ_TEMPERATURE
-        ),
-        max_tokens=max_tokens or settings.GROQ_MAX_TOKENS,
-        json_mode=json_mode,
-    )
+    last_exc: LLMUnavailableError | None = None
+
+    for attempt in range(_MAX_RETRIES):
+        try:
+            return await provider.complete(
+                messages,
+                temperature=temperature if temperature is not None else settings.GROQ_TEMPERATURE,
+                max_tokens=max_tokens or settings.GROQ_MAX_TOKENS,
+                json_mode=json_mode,
+            )
+        except LLMUnavailableError as e:
+            last_exc = e
+            if attempt < _MAX_RETRIES - 1:
+                delay = _RETRY_BASE_DELAY * (2**attempt)  # 0.5s, 1.0s
+                logger.warning(
+                    "LLM unavailable (attempt %d/%d) — retrying in %.1fs",
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+
+    logger.error("LLM unavailable after %d attempts — giving up", _MAX_RETRIES)
+    raise last_exc
 
 
-async def structured_chat(messages: list[dict], **kwargs) -> dict:
+async def structured_chat(
+    messages: list[dict],
+    *,
+    required_keys: Optional[set[str]] = None,
+    **kwargs,
+) -> dict:
     """Guaranteed JSON dict response. Strips markdown fences before parsing."""
     raw = await chat_completion(messages, json_mode=True, **kwargs)
     text = raw.strip()
@@ -191,5 +214,18 @@ async def structured_chat(messages: list[dict], **kwargs) -> dict:
         text = text.split("```", 2)[1]
         if text.startswith("json"):
             text = text[4:]
-        text = text.rsplit("```", 1)[0]
-    return json.loads(text.strip())
+        text = text.rsplit("```", 1)
+    data = json.loads(text.strip())
+
+    # Log missing keys so they surface in structured logs / Sentry.
+    # Never raises — callers handle fallback; this is purely for observability.
+    if required_keys:
+        missing = required_keys - data.keys()
+        if missing:
+            logger.warning(
+                "structured_chat: LLM response missing expected keys %s (got: %s)",
+                sorted(missing),
+                sorted(data.keys()),
+            )
+
+    return data

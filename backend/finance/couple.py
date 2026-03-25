@@ -3,6 +3,7 @@ finance/couple.py
 Couple's Money Planner — joint financial optimisation.
 Optimises: HRA claims, NPS matching, SIP split, insurance, tax efficiency.
 """
+
 from __future__ import annotations
 
 from core.config import settings
@@ -28,11 +29,20 @@ def _hra_benefit(profile: UserProfile) -> float:
     # Estimate: assume basic = 40% of gross, rent = 25% of gross
     basic = profile.monthly_gross_income * 0.4
     rent = profile.monthly_gross_income * 0.25
-    metro_cities = {"mumbai", "delhi", "kolkata", "chennai", "bangalore", "bengaluru", "hyderabad", "pune"}
+    metro_cities = {
+        "mumbai",
+        "delhi",
+        "kolkata",
+        "chennai",
+        "bangalore",
+        "bengaluru",
+        "hyderabad",
+        "pune",
+    }
     is_metro = profile.city.lower() in metro_cities
     hra_component = basic * (0.50 if is_metro else 0.40)
     rent_minus_10 = max(rent - basic * 0.10, 0)
-    return min(hra_component, rent_minus_10) * 12   # annual
+    return min(hra_component, rent_minus_10) * 12  # annual
 
 
 def _better_hra_claimant(a: UserProfile, b: UserProfile) -> tuple[str, float]:
@@ -53,10 +63,11 @@ def _nps_matching_benefit(a: UserProfile, b: UserProfile) -> float:
     Estimate combined benefit if both use it fully.
     """
     from finance.tax_constants import CURRENT as TAX
+
     benefit_a = max(0, TAX.nps_80ccd_1b_limit - a.tax_deductions.nps_80ccd_1b)
     benefit_b = max(0, TAX.nps_80ccd_1b_limit - b.tax_deductions.nps_80ccd_1b)
     # Tax saving = deduction × marginal rate (approximate 30% + cess for simplicity)
-    marginal_rate = 0.312   # 30% + 4% cess
+    marginal_rate = 0.312  # 30% + 4% cess
     return (benefit_a + benefit_b) * marginal_rate
 
 
@@ -75,8 +86,15 @@ def _optimise_sip_split(a: UserProfile, b: UserProfile, joint_goals) -> tuple[fl
     avg_retirement = (a.retirement_age + b.retirement_age) // 2
     years_left = max(avg_retirement - avg_age, 1)
 
-    fake_corpus = (combined_expenses * 12 * (1 + settings.DEFAULT_INFLATION_RATE) ** years_left / settings.DEFAULT_SAFE_WITHDRAWAL_RATE)
-    total_sip_needed = required_monthly_sip(fake_corpus, a.assets.total + b.assets.total, 0.10, years_left)
+    fake_corpus = (
+        combined_expenses
+        * 12
+        * (1 + settings.DEFAULT_INFLATION_RATE) ** years_left
+        / settings.DEFAULT_SAFE_WITHDRAWAL_RATE
+    )
+    total_sip_needed = required_monthly_sip(
+        fake_corpus, a.assets.total + b.assets.total, 0.10, years_left
+    )
 
     if total_surplus == 0:
         return 0.0, 0.0
@@ -102,14 +120,12 @@ def _joint_tax_saving(a: UserProfile, b: UserProfile) -> float:
             nps_80ccd_1b=float(TAX.nps_80ccd_1b_limit),
         )
 
-    saving_a = (
-        compute_old_regime_tax(a.annual_gross_income, a.tax_deductions)
-        - compute_old_regime_tax(a.annual_gross_income, max_deductions())
-    )
-    saving_b = (
-        compute_old_regime_tax(b.annual_gross_income, b.tax_deductions)
-        - compute_old_regime_tax(b.annual_gross_income, max_deductions())
-    )
+    saving_a = compute_old_regime_tax(
+        a.annual_gross_income, a.tax_deductions
+    ) - compute_old_regime_tax(a.annual_gross_income, max_deductions())
+    saving_b = compute_old_regime_tax(
+        b.annual_gross_income, b.tax_deductions
+    ) - compute_old_regime_tax(b.annual_gross_income, max_deductions())
     return round(max(saving_a, 0) + max(saving_b, 0), 0)
 
 
@@ -120,7 +136,9 @@ def _joint_insurance_recommendation(a: UserProfile, b: UserProfile) -> str:
     if not b.insurance.has_term_life:
         parts.append(f"Partner B needs ₹{b.annual_gross_income * 10:,.0f} term cover")
     if not a.insurance.has_health or not b.insurance.has_health:
-        parts.append("Move to a joint family floater health plan — cheaper than two individual plans")
+        parts.append(
+            "Move to a joint family floater health plan — cheaper than two individual plans"
+        )
     if not parts:
         return "Insurance adequate — review sum assured annually as income grows"
     return "; ".join(parts)
@@ -163,7 +181,7 @@ def optimise_couple_finances(couple: CoupleProfile) -> CoupleOptimisation:
         partner_b_sip=sip_b,
         joint_tax_saving=joint_saving,
         joint_insurance_recommendation=insurance_rec,
-        recommendations=[],    # filled below
+        recommendations=[],  # filled below
     )
     result.recommendations = _build_recommendations(a, b, result)
     return result

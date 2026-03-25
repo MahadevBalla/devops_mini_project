@@ -2,6 +2,7 @@
 routers/life_event.py
 POST /api/life-event — Life Event Financial Advisor.
 """
+
 from __future__ import annotations
 
 import logging
@@ -31,13 +32,16 @@ async def life_event(raw_data: dict) -> LifeEventResponse:
     try:
         # Step 1: Intake — profile keys only
         profile_data = {
-            k: v for k, v in raw_data.items()
+            k: v
+            for k, v in raw_data.items()
             if k not in ("event_type", "event_amount", "event_details")
         }
         profile, notes = await run_intake_agent(profile_data)
         decision_log.append(
             await append_log(
-                session_id, "IntakeAgent", "Profile validated",
+                session_id,
+                "IntakeAgent",
+                "Profile validated",
                 {"raw_keys": list(raw_data.keys())},
                 {"notes": notes},
             )
@@ -53,7 +57,9 @@ async def life_event(raw_data: dict) -> LifeEventResponse:
         result = analyse_life_event(event_input)
         decision_log.append(
             await append_log(
-                session_id, "FinanceEngine", "Life event analysed",
+                session_id,
+                "FinanceEngine",
+                "Life event analysed",
                 {"event_type": event_input.event_type.value, "amount": event_input.event_amount},
                 {"allocations": len(result.allocations), "tax_impact": result.tax_impact},
             )
@@ -63,7 +69,9 @@ async def life_event(raw_data: dict) -> LifeEventResponse:
         advice = await generate_life_event_advice(profile, result)
         decision_log.append(
             await append_log(
-                session_id, "MentorAgent", "Life event advice generated",
+                session_id,
+                "MentorAgent",
+                "Life event advice generated",
                 {"event": result.event_type.value},
                 {"actions_count": len(advice.key_actions)},
             )
@@ -74,7 +82,9 @@ async def life_event(raw_data: dict) -> LifeEventResponse:
         advice, issues = await run_guardrail(advice, ref_numbers)
         decision_log.append(
             await append_log(
-                session_id, "GuardrailAgent", "Compliance check",
+                session_id,
+                "GuardrailAgent",
+                "Compliance check",
                 {"advice_summary": advice.summary[:100]},
                 {"status": "MODIFIED" if issues else "PASS", "issues": issues},
             )

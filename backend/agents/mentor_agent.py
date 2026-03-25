@@ -49,8 +49,7 @@ def _build_health_context(profile: UserProfile, result: MoneyHealthResult) -> st
             "overall_score": result.overall_score,
             "grade": result.grade,
             "dimensions": [
-                {"name": d.name, "score": d.score, "insight": d.insight}
-                for d in result.dimensions
+                {"name": d.name, "score": d.score, "insight": d.insight} for d in result.dimensions
             ],
             "net_worth": result.total_net_worth,
         },
@@ -149,9 +148,7 @@ def _fallback_advice(feature: str, result) -> AgentAdvice:
     )
 
 
-async def generate_health_advice(
-    profile: UserProfile, result: MoneyHealthResult
-) -> AgentAdvice:
+async def generate_health_advice(profile: UserProfile, result: MoneyHealthResult) -> AgentAdvice:
     try:
         context = _build_health_context(profile, result)
         messages = [
@@ -185,9 +182,7 @@ async def generate_fire_advice(profile: UserProfile, result: FIREPlan) -> AgentA
         return _fallback_advice("fire", result)
 
 
-async def generate_tax_advice(
-    profile: UserProfile, result: TaxRegimeComparison
-) -> AgentAdvice:
+async def generate_tax_advice(profile: UserProfile, result: TaxRegimeComparison) -> AgentAdvice:
     try:
         context = _build_tax_context(profile, result)
         messages = [

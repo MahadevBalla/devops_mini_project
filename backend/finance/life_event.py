@@ -3,6 +3,7 @@ finance/life_event.py
 Life Event Financial Advisor — deterministic allocation logic for
 bonus, inheritance, marriage, new baby, job loss, home purchase.
 """
+
 from __future__ import annotations
 
 from core.config import settings
@@ -25,42 +26,50 @@ def _analyse_bonus(profile: UserProfile, amount: float) -> list[LifeEventAllocat
     for debt in sorted(profile.debts, key=lambda d: d.interest_rate, reverse=True):
         if debt.interest_rate > 18 and not debt.is_secured and remaining > 0:
             pay = min(debt.outstanding, remaining)
-            allocations.append(LifeEventAllocation(
-                category="Debt Payoff",
-                amount=pay,
-                rationale=f"Prepay {debt.name} ({debt.interest_rate:.0f}% p.a.) — guaranteed {debt.interest_rate:.0f}% return",
-            ))
+            allocations.append(
+                LifeEventAllocation(
+                    category="Debt Payoff",
+                    amount=pay,
+                    rationale=f"Prepay {debt.name} ({debt.interest_rate:.0f}% p.a.) — guaranteed {debt.interest_rate:.0f}% return",
+                )
+            )
             remaining -= pay
 
     # 2. Emergency fund top-up
     ef_needed = profile.monthly_expenses * settings.EMERGENCY_FUND_MONTHS - profile.emergency_fund
     if ef_needed > 0 and remaining > 0:
         top_up = min(ef_needed, remaining * 0.3)
-        allocations.append(LifeEventAllocation(
-            category="Emergency Fund",
-            amount=top_up,
-            rationale=f"Top up emergency fund to {settings.EMERGENCY_FUND_MONTHS}-month target",
-        ))
+        allocations.append(
+            LifeEventAllocation(
+                category="Emergency Fund",
+                amount=top_up,
+                rationale=f"Top up emergency fund to {settings.EMERGENCY_FUND_MONTHS}-month target",
+            )
+        )
         remaining -= top_up
 
     # 3. 80C top-up if unused
     unused_80c = TAX.sec_80c_limit - profile.tax_deductions.section_80c
     if unused_80c > 0 and remaining > 0:
         invest_80c = min(unused_80c, remaining * 0.2)
-        allocations.append(LifeEventAllocation(
-            category="Tax-Saving Investment (80C)",
-            amount=invest_80c,
-            rationale=f"₹{invest_80c:,.0f} in ELSS/PPF reduces taxable income under old regime",
-        ))
+        allocations.append(
+            LifeEventAllocation(
+                category="Tax-Saving Investment (80C)",
+                amount=invest_80c,
+                rationale=f"₹{invest_80c:,.0f} in ELSS/PPF reduces taxable income under old regime",
+            )
+        )
         remaining -= invest_80c
 
     # 4. Long-term equity investment
     if remaining > 0:
-        allocations.append(LifeEventAllocation(
-            category="Long-term Equity Investment",
-            amount=remaining,
-            rationale="Deploy via lump-sum + STP into equity index funds for long-term wealth",
-        ))
+        allocations.append(
+            LifeEventAllocation(
+                category="Long-term Equity Investment",
+                amount=remaining,
+                rationale="Deploy via lump-sum + STP into equity index funds for long-term wealth",
+            )
+        )
 
     return allocations
 
@@ -74,28 +83,48 @@ def _analyse_inheritance(profile: UserProfile, amount: float) -> list[LifeEventA
     ef_needed = profile.monthly_expenses * settings.EMERGENCY_FUND_MONTHS - profile.emergency_fund
     if ef_needed > 0:
         top_up = min(ef_needed, remaining)
-        allocations.append(LifeEventAllocation(category="Emergency Fund", amount=top_up, rationale="Fully fund 6-month emergency buffer first"))
+        allocations.append(
+            LifeEventAllocation(
+                category="Emergency Fund",
+                amount=top_up,
+                rationale="Fully fund 6-month emergency buffer first",
+            )
+        )
         remaining -= top_up
 
     # 2. Clear all high-interest debt
     for debt in sorted(profile.debts, key=lambda d: d.interest_rate, reverse=True):
         if debt.interest_rate > 10 and remaining > 0:
             pay = min(debt.outstanding, remaining)
-            allocations.append(LifeEventAllocation(category="Debt Clearance", amount=pay, rationale=f"Eliminate {debt.name} at {debt.interest_rate:.0f}%"))
+            allocations.append(
+                LifeEventAllocation(
+                    category="Debt Clearance",
+                    amount=pay,
+                    rationale=f"Eliminate {debt.name} at {debt.interest_rate:.0f}%",
+                )
+            )
             remaining -= pay
 
     # 3. Term insurance if not covered
     if not profile.insurance.has_term_life and remaining > 50_000:
-        allocations.append(LifeEventAllocation(category="Term Insurance Premium (first year)", amount=min(25_000, remaining), rationale="Buy ₹1Cr+ term cover immediately"))
+        allocations.append(
+            LifeEventAllocation(
+                category="Term Insurance Premium (first year)",
+                amount=min(25_000, remaining),
+                rationale="Buy ₹1Cr+ term cover immediately",
+            )
+        )
         remaining -= min(25_000, remaining)
 
     # 4. Invest remainder with STP
     if remaining > 0:
-        allocations.append(LifeEventAllocation(
-            category="Wealth Building (Lump Sum + STP)",
-            amount=remaining,
-            rationale="Park in liquid fund, STP over 12 months into equity index funds to average cost",
-        ))
+        allocations.append(
+            LifeEventAllocation(
+                category="Wealth Building (Lump Sum + STP)",
+                amount=remaining,
+                rationale="Park in liquid fund, STP over 12 months into equity index funds to average cost",
+            )
+        )
 
     return allocations
 
@@ -103,7 +132,9 @@ def _analyse_inheritance(profile: UserProfile, amount: float) -> list[LifeEventA
 def _analyse_marriage(profile: UserProfile) -> tuple[list[LifeEventAllocation], list[str]]:
     insurance_gaps = []
     if not profile.insurance.has_term_life:
-        insurance_gaps.append("No term life cover — marriage creates financial dependents, buy ₹1Cr+ cover now")
+        insurance_gaps.append(
+            "No term life cover — marriage creates financial dependents, buy ₹1Cr+ cover now"
+        )
     if not profile.insurance.has_health:
         insurance_gaps.append("No health insurance — add family floater plan after marriage")
     return [], insurance_gaps
@@ -112,28 +143,44 @@ def _analyse_marriage(profile: UserProfile) -> tuple[list[LifeEventAllocation], 
 def _analyse_new_baby(profile: UserProfile) -> tuple[list[LifeEventAllocation], list[str]]:
     insurance_gaps = []
     allocations = [
-        LifeEventAllocation(category="Child Education Fund", amount=profile.monthly_gross_income * 2, rationale="Start Sukanya Samriddhi (girl) or equity MF for 18yr education goal"),
-        LifeEventAllocation(category="Enhanced Emergency Fund", amount=profile.monthly_expenses * 3, rationale="Increase emergency fund by 3 months for baby-related expenses"),
+        LifeEventAllocation(
+            category="Child Education Fund",
+            amount=profile.monthly_gross_income * 2,
+            rationale="Start Sukanya Samriddhi (girl) or equity MF for 18yr education goal",
+        ),
+        LifeEventAllocation(
+            category="Enhanced Emergency Fund",
+            amount=profile.monthly_expenses * 3,
+            rationale="Increase emergency fund by 3 months for baby-related expenses",
+        ),
     ]
     if not profile.insurance.has_term_life:
-        insurance_gaps.append("No term cover — critical now that you have a dependent child. Buy 20× annual income cover.")
+        insurance_gaps.append(
+            "No term cover — critical now that you have a dependent child. Buy 20× annual income cover."
+        )
     if not profile.insurance.has_health:
         insurance_gaps.append("Add child to family floater health plan immediately")
-    insurance_gaps.append("Consider critical illness rider — parental illness = no income + caregiving costs")
+    insurance_gaps.append(
+        "Consider critical illness rider — parental illness = no income + caregiving costs"
+    )
     return allocations, insurance_gaps
 
 
 def _tax_on_windfall(amount: float, profile: UserProfile) -> float:
     """Rough tax impact of a windfall on annual income (top marginal rate approximation)."""
     from finance.tax import compute_new_regime_tax, compute_old_regime_tax
+
     base_tax = min(
         compute_old_regime_tax(profile.annual_gross_income, profile.tax_deductions),
         compute_new_regime_tax(profile.annual_gross_income),
     )
-    incremental_tax = min(
-        compute_old_regime_tax(profile.annual_gross_income + amount, profile.tax_deductions),
-        compute_new_regime_tax(profile.annual_gross_income + amount),
-    ) - base_tax
+    incremental_tax = (
+        min(
+            compute_old_regime_tax(profile.annual_gross_income + amount, profile.tax_deductions),
+            compute_new_regime_tax(profile.annual_gross_income + amount),
+        )
+        - base_tax
+    )
     return max(incremental_tax, 0.0)
 
 
@@ -180,8 +227,7 @@ def analyse_life_event(event_input: LifeEventInput) -> LifeEventResult:
 
     elif event == LifeEventType.JOB_LOSS:
         months_runway = (
-            profile.emergency_fund / profile.monthly_expenses
-            if profile.monthly_expenses > 0 else 0
+            profile.emergency_fund / profile.monthly_expenses if profile.monthly_expenses > 0 else 0
         )
         priority_actions = [
             f"Emergency fund gives {months_runway:.1f} months runway — activate cost-cutting immediately",
@@ -190,15 +236,26 @@ def analyse_life_event(event_input: LifeEventInput) -> LifeEventResult:
             "Avoid premature FD/MF redemptions — use emergency fund first",
         ]
         insurance_gaps = (
-            ["Health insurance not active — buy individual plan immediately (employer cover lapsed)"]
-            if not profile.insurance.has_health else []
+            [
+                "Health insurance not active — buy individual plan immediately (employer cover lapsed)"
+            ]
+            if not profile.insurance.has_health
+            else []
         )
 
     elif event == LifeEventType.HOME_PURCHASE:
         down_payment = event_input.event_details.get("property_value", 0) * 0.20
         allocations = [
-            LifeEventAllocation(category="Down Payment", amount=down_payment, rationale="20% down payment reduces loan, EMI, and interest burden"),
-            LifeEventAllocation(category="Registration + Stamp Duty", amount=down_payment * 0.3, rationale="~6-8% of property value for registration and stamp duty"),
+            LifeEventAllocation(
+                category="Down Payment",
+                amount=down_payment,
+                rationale="20% down payment reduces loan, EMI, and interest burden",
+            ),
+            LifeEventAllocation(
+                category="Registration + Stamp Duty",
+                amount=down_payment * 0.3,
+                rationale="~6-8% of property value for registration and stamp duty",
+            ),
         ]
         priority_actions = [
             "Section 24(b): deduct up to ₹2L home loan interest under old regime",

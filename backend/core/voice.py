@@ -6,10 +6,12 @@ Sarvam AI voice client.
 
 API docs: https://docs.sarvam.ai
 """
+
 from __future__ import annotations
 
 import base64
 import logging
+import re
 
 import httpx
 
@@ -115,11 +117,21 @@ async def text_to_speech(
 
 
 def _chunk_text(text: str, max_chars: int = 490) -> list[str]:
-    """Split text at sentence boundaries to stay under max_chars."""
+    """
+    Split text at sentence boundaries to stay under max_chars per chunk.
+
+    Hard-cap every chunk at max_chars.
+    The previous implementation could produce a chunk longer than max_chars
+    when a single sentence exceeds the limit. In that case _split_sentences returns it whole,
+    `current = sentence` assigns it untruncated, and the final
+    `chunks or [text[:max_chars]]` fallback never fires because chunks is
+    non-empty. The [:max_chars] slice on each element in the return statement
+    is the hard enforcement layer that makes the guarantee unconditional.
+    """
     if len(text) <= max_chars:
         return [text]
 
-    chunks = []
+    chunks: list[str] = []
     current = ""
     for sentence in _split_sentences(text):
         if len(current) + len(sentence) <= max_chars:
@@ -127,12 +139,19 @@ def _chunk_text(text: str, max_chars: int = 490) -> list[str]:
         else:
             if current:
                 chunks.append(current.strip())
+            # A single sentence longer than max_chars will be stored as-is
+            # here and then hard-capped by [:max_chars] at return time.
             current = sentence
+
     if current.strip():
         chunks.append(current.strip())
-    return chunks or [text[:max_chars]]
+
+    # Enforce hard limit on every element unconditionally
+    # Without this, any sentence > max_chars slips through as an oversized
+    # chunk, sending > 500 chars to the Sarvam API and getting a 400 error
+    return [c[:max_chars] for c in chunks] or [text[:max_chars]]
 
 
 def _split_sentences(text: str) -> list[str]:
-    import re
+    # Devanagari danda (।) included for Hindi text support
     return re.split(r"(?<=[.!?।])\s+", text)

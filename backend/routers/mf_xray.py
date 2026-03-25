@@ -3,9 +3,11 @@ routers/mf_xray.py
 POST /api/mf-xray — MF Portfolio X-Ray.
 Accepts CAMS/KFintech CSV or PDF consolidated statement.
 """
+
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
@@ -26,6 +28,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["mf-xray"])
 
 _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+# Previously only file size was checked; a renamed .exe passed through silently.
+_ALLOWED_EXTENSIONS = {".csv", ".pdf"}
+
+# Browser/OS MIME types vary — application/octet-stream is the generic binary
+# fallback many clients send for CSVs, so we permit it and rely on extension +
+# magic-byte checks as the real enforcement layer.
+_ALLOWED_MIMETYPES = {
+    "text/csv",
+    "text/plain",
+    "application/csv",
+    "application/pdf",
+    "application/octet-stream",  # generic fallback — extension check is the gate
+}
+
+# PDF magic bytes: every valid PDF starts with %PDF
+_PDF_MAGIC = b"%PDF"
 
 
 def _extract_float(row: dict, keys: list[str], default: str = "0") -> float:
@@ -52,7 +71,9 @@ def _csv_rows_to_holdings(rows: list[dict]) -> list[MFHolding]:
             invested = _extract_float(row, ["cost_value", "invested_amount"])
             current = _extract_float(row, ["market_value", "current_value"])
 
-            expense_ratio_raw = _extract_float(row, ["expense_ratio", "ter", "expense_ratio_%"], "0")
+            expense_ratio_raw = _extract_float(
+                row, ["expense_ratio", "ter", "expense_ratio_%"], "0"
+            )
             expense_ratio = expense_ratio_raw if expense_ratio_raw > 0 else None
 
             if units == 0 and invested == 0:
@@ -61,17 +82,19 @@ def _csv_rows_to_holdings(rows: list[dict]) -> list[MFHolding]:
             current_nav = current_nav if current_nav > 0 else avg_nav
             current_value = current if current > 0 else units * current_nav
 
-            holdings.append(MFHolding(
-                scheme_name=scheme,
-                isin=isin,
-                units=units,
-                avg_nav=avg_nav,
-                current_nav=current_nav,
-                invested_amount=invested,
-                current_value=current_value,
-                category=_infer_category(scheme),
-                expense_ratio=expense_ratio,
-            ))
+            holdings.append(
+                MFHolding(
+                    scheme_name=scheme,
+                    isin=isin,
+                    units=units,
+                    avg_nav=avg_nav,
+                    current_nav=current_nav,
+                    invested_amount=invested,
+                    current_value=current_value,
+                    category=_infer_category(scheme),
+                    expense_ratio=expense_ratio,
+                )
+            )
         except (ValueError, KeyError):
             continue
     return holdings
@@ -79,7 +102,12 @@ def _csv_rows_to_holdings(rows: list[dict]) -> list[MFHolding]:
 
 @router.post(
     "/mf-xray",
-    responses={400: {"model": ErrorResponse}, 413: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    responses={
+        400: {"model": ErrorResponse},
+        413: {"model": ErrorResponse},
+        415: {"model": ErrorResponse},
+        500: {"model": ErrorResponse},
+    },
 )
 async def mf_xray(
     file: UploadFile = File(..., description="CAMS or KFintech consolidated CSV/PDF statement"),
@@ -87,19 +115,62 @@ async def mf_xray(
     session_id = await create_session("mf_xray")
     decision_log: list[dict] = []
 
+    # Layer 1: extension check
+    # Catches obviously wrong file types before we read any bytes
+    filename = file.filename or ""
+    ext = Path(filename).suffix.lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            415,
+            detail={
+                "error": f"Unsupported file type '{ext}'. Upload a .csv or .pdf statement.",
+                "code": "INVALID_FILE_TYPE",
+            },
+        )
+
+    # Layer 2: MIME type check
+    # Rejects clients that send an obviously wrong Content-Type header
+    # application/octet-stream is permitted because many browsers send it
+    # for CSVs; the extension + magic-byte checks are the real gates
+    content_type = (file.content_type or "").split(";")[0].strip().lower()
+    if content_type and content_type not in _ALLOWED_MIMETYPES:
+        raise HTTPException(
+            415,
+            detail={
+                "error": f"Unexpected Content-Type '{content_type}'. Expected text/csv or application/pdf.",
+                "code": "INVALID_MIME_TYPE",
+            },
+        )
+
     content = await file.read()
     if len(content) > _MAX_FILE_SIZE:
-        raise HTTPException(413, detail={"error": "File too large (max 10 MB)", "code": "FILE_TOO_LARGE"})
+        raise HTTPException(
+            413,
+            detail={"error": "File too large (max 10 MB)", "code": "FILE_TOO_LARGE"},
+        )
+
+    # Layer 3: magic-byte check for PDFs
+    # Catches a .pdf file that is actually a binary executable or ZIP;
+    # those will not start with %PDF regardless of their extension
+    # CSVs have no reliable magic bytes, so we trust the extension for them.
+    if ext == ".pdf" and not content.startswith(_PDF_MAGIC):
+        raise HTTPException(
+            400,
+            detail={
+                "error": "File does not appear to be a valid PDF (missing %PDF header).",
+                "code": "INVALID_FILE",
+            },
+        )
 
     try:
         # Step 1: Parse
-        filename = (file.filename or "").lower()
         holdings: list[MFHolding] = []
 
-        if filename.endswith(".csv") or "text" in (file.content_type or ""):
+        if ext == ".csv":
             rows = parse_cams_csv(content)
             holdings = _csv_rows_to_holdings(rows)
         else:
+            # ext == ".pdf" — already magic-byte validated above
             text = parse_cams_pdf(content)
             holdings = _parse_pdf_holdings(text)
 
@@ -114,8 +185,10 @@ async def mf_xray(
 
         decision_log.append(
             await append_log(
-                session_id, "Parser", "Statement parsed",
-                {"filename": file.filename, "size_kb": len(content) // 1024},
+                session_id,
+                "Parser",
+                "Statement parsed",
+                {"filename": filename, "size_kb": len(content) // 1024},
                 {"holdings_found": len(holdings)},
             )
         )
@@ -124,7 +197,9 @@ async def mf_xray(
         result = analyse_portfolio(holdings)
         decision_log.append(
             await append_log(
-                session_id, "FinanceEngine", "Portfolio analysed",
+                session_id,
+                "FinanceEngine",
+                "Portfolio analysed",
                 {"holdings_count": len(holdings)},
                 {
                     "total_invested": result.total_invested,
@@ -138,7 +213,9 @@ async def mf_xray(
         advice = await generate_mf_xray_advice(result)
         decision_log.append(
             await append_log(
-                session_id, "MentorAgent", "MF X-Ray advice generated",
+                session_id,
+                "MentorAgent",
+                "MF X-Ray advice generated",
                 {"funds": len(holdings)},
                 {"actions_count": len(advice.key_actions)},
             )
@@ -153,7 +230,9 @@ async def mf_xray(
         advice, issues = await run_guardrail(advice, ref_numbers)
         decision_log.append(
             await append_log(
-                session_id, "GuardrailAgent", "Compliance check",
+                session_id,
+                "GuardrailAgent",
+                "Compliance check",
                 {"advice_summary": advice.summary[:100]},
                 {"status": "MODIFIED" if issues else "PASS", "issues": issues},
             )

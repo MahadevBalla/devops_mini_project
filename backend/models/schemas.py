@@ -5,10 +5,11 @@ Pydantic v2 models — the single source of truth for all data contracts.
 
 from __future__ import annotations
 
+import uuid as uuid_module
 from enum import Enum
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class RiskProfile(str, Enum):
@@ -16,14 +17,17 @@ class RiskProfile(str, Enum):
     MODERATE = "moderate"
     AGGRESSIVE = "aggressive"
 
+
 class EmploymentType(str, Enum):
     SALARIED = "salaried"
     SELF_EMPLOYED = "self_employed"
     BUSINESS = "business"
 
+
 class TaxRegime(str, Enum):
     OLD = "old"
     NEW = "new"
+
 
 class GoalType(str, Enum):
     RETIREMENT = "retirement"
@@ -33,6 +37,7 @@ class GoalType(str, Enum):
     EMERGENCY = "emergency"
     VACATION = "vacation"
     CUSTOM = "custom"
+
 
 class LifeEventType(str, Enum):
     BONUS = "bonus"
@@ -49,12 +54,14 @@ class Goal(BaseModel):
     target_amount: float = Field(..., ge=0)
     target_year: int = Field(..., ge=2025, le=2075)
 
+
 class DebtItem(BaseModel):
     name: str
     outstanding: float = Field(..., ge=0)
     emi: float = Field(..., ge=0)
     interest_rate: float = Field(..., ge=0, le=100)
     is_secured: bool = True
+
 
 class AssetAllocation(BaseModel):
     equity: float = Field(0.0, ge=0)
@@ -67,7 +74,16 @@ class AssetAllocation(BaseModel):
 
     @property
     def total(self) -> float:
-        return self.equity + self.debt + self.gold + self.real_estate + self.cash + self.ppf_epf + self.other
+        return (
+            self.equity
+            + self.debt
+            + self.gold
+            + self.real_estate
+            + self.cash
+            + self.ppf_epf
+            + self.other
+        )
+
 
 class InsuranceCoverage(BaseModel):
     has_term_life: bool = False
@@ -76,13 +92,47 @@ class InsuranceCoverage(BaseModel):
     health_cover: float = 0.0
     has_critical_illness: bool = False
 
+
 class TaxDeductions(BaseModel):
-    section_80c: float = Field(0.0, ge=0, le=150_000)
-    section_80d_self: float = Field(0.0, ge=0, le=50_000)
-    section_80d_parents: float = Field(0.0, ge=0, le=50_000)
-    nps_80ccd_1b: float = Field(0.0, ge=0, le=50_000)
+    section_80c: float = Field(
+        0.0,
+        ge=0,
+        le=150_000,
+        description="Max ₹1.5L under Section 80C",
+    )
+    section_80d_self: float = Field(
+        0.0,
+        ge=0,
+        le=50_000,
+        description="₹25k for taxpayer <60 yrs; ₹50k for senior citizen (set section_80d_self_is_senior=True)",
+    )
+    section_80d_self_is_senior: bool = Field(
+        False,
+        description="Set True if taxpayer is ≥60 years old — raises 80D self limit to ₹50k",
+    )
+    section_80d_parents: float = Field(
+        0.0,
+        ge=0,
+        le=50_000,
+        description="₹25k for parents <60 yrs; ₹50k if parents are senior citizens (set section_80d_parents_are_senior=True)",
+    )
+    section_80d_parents_are_senior: bool = Field(
+        False,
+        description="Set True if parents are ≥60 years old — raises 80D parents limit to ₹50k",
+    )
+    nps_80ccd_1b: float = Field(
+        0.0,
+        ge=0,
+        le=50_000,
+        description="Additional NPS deduction over 80C limit, max ₹50k",
+    )
     hra_claimed: float = Field(0.0, ge=0)
-    home_loan_interest: float = Field(0.0, ge=0, le=200_000)
+    home_loan_interest: float = Field(
+        0.0,
+        ge=0,
+        le=200_000,
+        description="Section 24(b) home loan interest, max ₹2L for self-occupied",
+    )
     other_deductions: float = Field(0.0, ge=0)
 
 
@@ -137,6 +187,7 @@ class SIPGoal(BaseModel):
     stepup_rate: float = 0.10
     current_on_track: bool
 
+
 class FIREPlan(BaseModel):
     fi_corpus_required: float
     current_corpus: float
@@ -144,7 +195,7 @@ class FIREPlan(BaseModel):
     required_monthly_sip: float
     required_stepup_sip: float = 0.0
     stepup_rate: float = 0.10
-    projected_fi_age: float
+    projected_fi_age: Optional[float] = None  # None = FI not reachable within 60 years
     years_to_fi: float
     monthly_retirement_expense: float
     sip_goals: list[SIPGoal]
@@ -157,6 +208,7 @@ class DimensionScore(BaseModel):
     score: float = Field(..., ge=0, le=100)
     label: str
     insight: str
+
 
 class MoneyHealthResult(BaseModel):
     overall_score: float
@@ -186,10 +238,12 @@ class LifeEventInput(BaseModel):
     event_amount: float = Field(0.0, ge=0)
     event_details: dict = Field(default_factory=dict)
 
+
 class LifeEventAllocation(BaseModel):
     category: str
     amount: float
     rationale: str
+
 
 class LifeEventResult(BaseModel):
     event_type: LifeEventType
@@ -206,6 +260,7 @@ class CoupleProfile(BaseModel):
     partner_b: UserProfile
     is_married: bool = True
     joint_goals: list[Goal] = Field(default_factory=list)
+
 
 class CoupleOptimisation(BaseModel):
     combined_net_worth: float
@@ -233,11 +288,13 @@ class MFHolding(BaseModel):
     expense_ratio: Optional[float] = None
     category: str = ""
 
+
 class OverlapPair(BaseModel):
     fund_a: str
     fund_b: str
     overlap_percent: float
     common_stocks: list[str]
+
 
 class MFXRayResult(BaseModel):
     total_invested: float
@@ -256,10 +313,26 @@ class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
 
+
 class ChatRequest(BaseModel):
     session_id: str
-    message: str
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=4000,
+        description="User message — min 1 char, max 4000 chars to prevent prompt stuffing",
+    )
     feature_context: Optional[str] = None
+
+    @field_validator("session_id")
+    @classmethod
+    def validate_uuid(cls, v: str) -> str:
+        try:
+            uuid_module.UUID(v)
+        except ValueError:
+            raise ValueError("session_id must be a valid UUID (e.g. from POST /api/session)")
+        return v
+
 
 class ChatResponse(BaseModel):
     session_id: str
@@ -283,12 +356,14 @@ class HealthScoreResponse(BaseModel):
     advice: AgentAdvice
     decision_log: list[dict]
 
+
 class FIREPlanResponse(BaseModel):
     session_id: str
     profile: UserProfile
     result: FIREPlan
     advice: AgentAdvice
     decision_log: list[dict]
+
 
 class TaxWizardResponse(BaseModel):
     session_id: str
@@ -297,11 +372,13 @@ class TaxWizardResponse(BaseModel):
     advice: AgentAdvice
     decision_log: list[dict]
 
+
 class LifeEventResponse(BaseModel):
     session_id: str
     result: LifeEventResult
     advice: AgentAdvice
     decision_log: list[dict]
+
 
 class CoupleResponse(BaseModel):
     session_id: str
@@ -309,11 +386,13 @@ class CoupleResponse(BaseModel):
     advice: AgentAdvice
     decision_log: list[dict]
 
+
 class MFXRayResponse(BaseModel):
     session_id: str
     result: MFXRayResult
     advice: AgentAdvice
     decision_log: list[dict]
+
 
 class ErrorResponse(BaseModel):
     error: str

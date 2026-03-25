@@ -3,9 +3,11 @@ finance/fire.py
 FIRE engine with step-up SIP, annuity ladder projection, goal SIPs.
 Zero hardcoding — all rates from config, all tax from tax_constants.
 """
+
 from __future__ import annotations
 
 import datetime
+from typing import Optional
 
 from core.config import settings
 from models.schemas import FIREPlan, Goal, SIPGoal, UserProfile
@@ -31,7 +33,7 @@ def future_value_stepup_sip(
     initial_monthly_sip: float,
     annual_rate: float,
     years: float,
-    annual_stepup_rate: float = 0.10,   # 10% step-up each year
+    annual_stepup_rate: float = 0.10,
 ) -> float:
     """
     FV of a step-up SIP where contribution increases by `annual_stepup_rate` every year.
@@ -40,11 +42,12 @@ def future_value_stepup_sip(
     total_fv = 0.0
     current_sip = initial_monthly_sip
     for year in range(int(years)):
-        # FV of this year's monthly SIPs, grown for the remaining years
         years_remaining = years - year
-        fv_this_year = future_value_sip(current_sip, annual_rate, 1) * compound_growth_value(1, annual_rate, years_remaining - 1)
+        fv_this_year = future_value_sip(current_sip, annual_rate, 1) * compound_growth_value(
+            1, annual_rate, years_remaining - 1
+        )
         total_fv += fv_this_year
-        current_sip *= (1 + annual_stepup_rate)
+        current_sip *= 1 + annual_stepup_rate
     return total_fv
 
 
@@ -106,20 +109,18 @@ def projected_fi_age(
     corpus_target: float,
     annual_rate: float,
     annual_stepup_rate: float = 0.10,
-) -> float:
+) -> Optional[float]:
     for years in range(1, 61):
-        projected = (
-            compound_growth_value(current_corpus, annual_rate, years)
-            + future_value_stepup_sip(monthly_sip, annual_rate, years, annual_stepup_rate)
-        )
+        projected = compound_growth_value(
+            current_corpus, annual_rate, years
+        ) + future_value_stepup_sip(monthly_sip, annual_rate, years, annual_stepup_rate)
         if projected >= corpus_target:
-            prev = (
-                compound_growth_value(current_corpus, annual_rate, years - 1)
-                + future_value_stepup_sip(monthly_sip, annual_rate, years - 1, annual_stepup_rate)
-            )
+            prev = compound_growth_value(
+                current_corpus, annual_rate, years - 1
+            ) + future_value_stepup_sip(monthly_sip, annual_rate, years - 1, annual_stepup_rate)
             frac = (corpus_target - prev) / max(projected - prev, 1)
-            return current_age + years - 1 + frac
-    return float(current_age + 60)
+            return round(current_age + years - 1 + frac, 1)
+    return None  # FI not reachable within 60-year horizon
 
 
 # FIRE corpus target
@@ -184,7 +185,11 @@ def build_fire_plan(profile: UserProfile, annual_stepup: float = 0.10) -> FIREPl
     stepup_sip = required_stepup_sip(corpus_target, current_corpus, rate, years_left, annual_stepup)
 
     investable = max(0.0, profile.monthly_savings - profile.total_emi)
-    fi_age = projected_fi_age(profile.age, current_corpus, investable, corpus_target, rate, annual_stepup)
+
+    fi_age: Optional[float] = projected_fi_age(
+        profile.age, current_corpus, investable, corpus_target, rate, annual_stepup
+    )
+    fi_age_for_calc: float = fi_age if fi_age is not None else float(profile.age + 60)
 
     monthly_ret_expense = compound_growth_value(
         profile.monthly_expenses, settings.DEFAULT_INFLATION_RATE, years_left
@@ -199,9 +204,9 @@ def build_fire_plan(profile: UserProfile, annual_stepup: float = 0.10) -> FIREPl
         required_monthly_sip=round(flat_sip, 0),
         required_stepup_sip=round(stepup_sip, 0),
         stepup_rate=annual_stepup,
-        projected_fi_age=round(fi_age, 1),
-        years_to_fi=round(max(fi_age - profile.age, 0), 1),
+        projected_fi_age=round(fi_age, 1) if fi_age is not None else None,
+        years_to_fi=round(max(fi_age_for_calc - profile.age, 0), 1),
         monthly_retirement_expense=round(monthly_ret_expense, 0),
         sip_goals=goal_sips,
-        on_track=fi_age <= profile.retirement_age,
+        on_track=fi_age is not None and fi_age <= profile.retirement_age,
     )

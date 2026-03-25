@@ -2,8 +2,10 @@
 routers/couple_planner.py
 POST /api/couple-planner — Couple Joint Finance Optimiser.
 """
+
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -30,11 +32,15 @@ async def couple_planner(raw_data: dict) -> CoupleResponse:
 
     try:
         # Step 1: Intake — validate both partner profiles independently
-        profile_a, notes_a = await run_intake_agent(raw_data.get("partner_a", {}))
-        profile_b, notes_b = await run_intake_agent(raw_data.get("partner_b", {}))
+        (profile_a, notes_a), (profile_b, notes_b) = await asyncio.gather(
+            run_intake_agent(raw_data.get("partner_a", {})),
+            run_intake_agent(raw_data.get("partner_b", {})),
+        )
         decision_log.append(
             await append_log(
-                session_id, "IntakeAgent", "Both profiles validated",
+                session_id,
+                "IntakeAgent",
+                "Both profiles validated",
                 {"keys": list(raw_data.keys())},
                 {"notes_a": notes_a, "notes_b": notes_b},
             )
@@ -51,9 +57,17 @@ async def couple_planner(raw_data: dict) -> CoupleResponse:
         result = optimise_couple_finances(couple)
         decision_log.append(
             await append_log(
-                session_id, "FinanceEngine", "Couple optimisation computed",
-                {"combined_income": profile_a.monthly_gross_income + profile_b.monthly_gross_income},
-                {"combined_net_worth": result.combined_net_worth, "joint_tax_saving": result.joint_tax_saving},
+                session_id,
+                "FinanceEngine",
+                "Couple optimisation computed",
+                {
+                    "combined_income": profile_a.monthly_gross_income
+                    + profile_b.monthly_gross_income
+                },
+                {
+                    "combined_net_worth": result.combined_net_worth,
+                    "joint_tax_saving": result.joint_tax_saving,
+                },
             )
         )
 
@@ -61,7 +75,9 @@ async def couple_planner(raw_data: dict) -> CoupleResponse:
         advice = await generate_couple_advice(couple, result)
         decision_log.append(
             await append_log(
-                session_id, "MentorAgent", "Couple advice generated",
+                session_id,
+                "MentorAgent",
+                "Couple advice generated",
                 {"net_worth": result.combined_net_worth},
                 {"actions_count": len(advice.key_actions)},
             )
@@ -76,7 +92,9 @@ async def couple_planner(raw_data: dict) -> CoupleResponse:
         advice, issues = await run_guardrail(advice, ref_numbers)
         decision_log.append(
             await append_log(
-                session_id, "GuardrailAgent", "Compliance check",
+                session_id,
+                "GuardrailAgent",
+                "Compliance check",
                 {"advice_summary": advice.summary[:100]},
                 {"status": "MODIFIED" if issues else "PASS", "issues": issues},
             )
