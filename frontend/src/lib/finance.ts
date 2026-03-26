@@ -2,6 +2,7 @@
  * Finance API service — typed wrappers for all 6 backend endpoints
  */
 import { api } from "@/lib/api";
+import type { HealthScoreApiResponse, HealthScorePayload } from "@/lib/health-score-types";
 
 // ─── Shared types ────────────────────────────────────────────────────────────
 
@@ -37,8 +38,8 @@ export interface HealthScoreResponse {
   decision_log: unknown[];
 }
 
-export async function getHealthScore(data: Record<string, unknown>): Promise<HealthScoreResponse> {
-  return api.post<HealthScoreResponse>("/api/health-score", data);
+export async function getHealthScore(data: HealthScorePayload): Promise<HealthScoreApiResponse> {
+  return api.post<HealthScoreApiResponse>("/api/health-score", data);
 }
 
 // ─── FIRE Planner ─────────────────────────────────────────────────────────────
