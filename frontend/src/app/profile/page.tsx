@@ -1,4 +1,4 @@
-import { ProfilePage } from "@/components/ui/profile-page";
+import { ProfilePage } from "@/components/profile";
 
 export default function Profile() {
   return <ProfilePage />;

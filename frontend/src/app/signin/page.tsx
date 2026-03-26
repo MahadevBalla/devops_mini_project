@@ -1,4 +1,4 @@
-import { AnimatedSignin } from "@/components/ui/animated-signin";
+import { AnimatedSignin } from "@/components/auth";
 
 export default function SigninPage() {
   return <AnimatedSignin />;

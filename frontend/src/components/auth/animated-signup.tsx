@@ -2,15 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button, Input, Label, Checkbox } from "@/components/ui";
 import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { authService, type UserCreate, type SignupResponse } from "@/lib/auth";
 import { ApiException } from "@/lib/api";
-import { EmailVerificationModal } from "@/components/ui/email-verification-modal";
+import { EmailVerificationModal } from "@/components/auth";
 import { validatePasswordStrength, validateFullName, validateIndianPhone, validateEmail, normalizePhoneNumber } from "@/lib/validation";
 
 interface PupilProps {

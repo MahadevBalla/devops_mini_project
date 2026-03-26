@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useRouter } from "next/navigation";
+import { Button, Input, Label, Checkbox } from "@/components/ui";
 import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { authService, type UserLogin } from "@/lib/auth";
@@ -171,6 +169,7 @@ const EyeBall = ({
 };
 
 export function AnimatedSignin() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -304,7 +303,7 @@ export function AnimatedSignin() {
       console.log("✅ Login successful!", response);
 
       // Redirect to profile page after successful login
-      window.location.href = "/profile";
+      router.push("/profile");
 
     } catch (err) {
       if (err instanceof ApiException) {

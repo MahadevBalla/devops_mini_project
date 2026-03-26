@@ -1,4 +1,4 @@
-import { AnimatedSignup } from "@/components/ui/animated-signup";
+import { AnimatedSignup } from "@/components/auth";
 
 export default function SignupPage() {
   return <AnimatedSignup />;
