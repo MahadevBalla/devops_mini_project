@@ -20,6 +20,7 @@ from core.exceptions import LLMUnavailableError
 from core.llm_client import chat_completion
 from db.session_store import AgentLog, AsyncSessionLocal, Session, append_log
 from models.schemas import ChatRequest, ChatResponse
+from rag.knowledge_base import query as rag_query
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -51,7 +52,6 @@ async def _get_chat_context(session_id: str) -> tuple[list[dict], str]:
     context_suffix — stringified session state_json for system prompt injection.
     """
     async with AsyncSessionLocal() as db:
-        # Fetch most-recent N log rows (DESC), then reverse to restore chronology
         log_result = await db.execute(
             select(AgentLog)
             .where(AgentLog.session_id == session_id)
@@ -61,7 +61,6 @@ async def _get_chat_context(session_id: str) -> tuple[list[dict], str]:
         )
         logs = list(reversed(log_result.scalars().all()))
 
-        # Fetch session state in the same open transaction — no second round-trip
         sess_result = await db.execute(select(Session).where(Session.id == session_id))
         session = sess_result.scalar_one_or_none()
 
@@ -99,7 +98,10 @@ def _parse_state_to_context(session: Session | None) -> str:
 async def chat(req: ChatRequest) -> ChatResponse:
     history, context_suffix = await _get_chat_context(req.session_id)
 
-    system = _SYSTEM_PROMPT + context_suffix
+    rag_context = rag_query(req.message)
+    rag_suffix = f"\n\nRELEVANT KNOWLEDGE BASE:\n{rag_context}" if rag_context else ""
+
+    system = _SYSTEM_PROMPT + context_suffix + rag_suffix
     messages = (
         [{"role": "system", "content": system}]
         + history
@@ -114,7 +116,6 @@ async def chat(req: ChatRequest) -> ChatResponse:
             "Please try again in a moment. Your financial data is safe."
         )
 
-    # Persist both turns
     await append_log(
         req.session_id,
         "ChatAgent",
@@ -144,7 +145,11 @@ async def chat_stream(session_id: str, message: str) -> StreamingResponse:
 
 async def _stream_reply(session_id: str, message: str) -> AsyncGenerator[str, None]:
     history, context_suffix = await _get_chat_context(session_id)
-    system = _SYSTEM_PROMPT + context_suffix
+
+    rag_context = rag_query(message)
+    rag_suffix = f"\n\nRELEVANT KNOWLEDGE BASE:\n{rag_context}" if rag_context else ""
+
+    system = _SYSTEM_PROMPT + context_suffix + rag_suffix
 
     messages = (
         [{"role": "system", "content": system}] + history + [{"role": "user", "content": message}]
