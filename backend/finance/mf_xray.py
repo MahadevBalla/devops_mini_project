@@ -157,42 +157,61 @@ def parse_cams_csv(content: bytes) -> list[dict]:
     return rows
 
 
+def _row_to_holding(row: dict, holding_index: int) -> MFHolding | None:
+    """Parse a single normalised CSV row into an MFHolding, or return None to skip."""
+    scheme = _extract_string(row, ["scheme_name", "scheme", "fund_name"], "Unknown Fund")
+    isin = _extract_string(row, ["isin", "isin_div_reinv_flag"], f"UNKNOWN_{holding_index}")
+    units = _extract_float(row, ["closing_unit_balance", "units"])
+    csv_avg_nav = _extract_float(row, ["average_cost", "avg_nav", "purchase_nav"])
+    csv_current_nav = _extract_float(row, ["nav", "current_nav", "latest_nav"])
+    invested = _extract_float(row, ["cost_value", "invested_amount"])
+    current = _extract_float(row, ["market_value", "current_value"])
+
+    expense_ratio_raw = _extract_float(row, ["expense_ratio", "ter", "expense_ratio_%"], "0")
+    expense_ratio = expense_ratio_raw if expense_ratio_raw > 0 else None
+
+    if units == 0 and invested == 0:
+        return None
+
+    # derive avg_nav from cost data if not directly in CSV
+    avg_nav = csv_avg_nav
+    if avg_nav == 0 and units > 0 and invested > 0:
+        avg_nav = round(invested / units, 4)
+
+    # current_nav — AMFI live first, CSV nav fallback, never 0
+    fallback_nav = csv_current_nav if csv_current_nav > 0 else avg_nav
+    live_nav = enrich_holding_nav(isin, scheme, fallback_nav)
+    if live_nav > 0:
+        current_nav = live_nav
+    elif csv_current_nav > 0:
+        current_nav = csv_current_nav
+    else:
+        current_nav = avg_nav
+
+    # current_value — prefer CSV market value, else compute
+    current_value = current if current > 0 else round(units * current_nav, 2)
+
+    return MFHolding(
+        scheme_name=scheme,
+        isin=isin,
+        units=units,
+        avg_nav=avg_nav,
+        current_nav=current_nav,
+        invested_amount=invested if invested > 0 else round(units * avg_nav, 2),
+        current_value=current_value,
+        category=_infer_category(scheme),
+        expense_ratio=expense_ratio,
+    )
+
+
 def csv_rows_to_holdings(rows: list[dict]) -> list[MFHolding]:
     """Convert normalised CAMS CSV rows → MFHolding objects."""
     holdings: list[MFHolding] = []
     for row in rows:
         try:
-            scheme = _extract_string(row, ["scheme_name", "scheme", "fund_name"], "Unknown Fund")
-            isin = _extract_string(row, ["isin", "isin_div_reinv_flag"], f"UNKNOWN_{len(holdings)}")
-            units = _extract_float(row, ["closing_unit_balance", "units"])
-            avg_nav = _extract_float(row, ["average_cost", "avg_nav", "purchase_nav"])
-            invested = _extract_float(row, ["cost_value", "invested_amount"])
-            current = _extract_float(row, ["market_value", "current_value"])
-
-            expense_ratio_raw = _extract_float(
-                row, ["expense_ratio", "ter", "expense_ratio_%"], "0"
-            )
-            expense_ratio = expense_ratio_raw if expense_ratio_raw > 0 else None
-
-            if units == 0 and invested == 0:
-                continue
-
-            live_nav = enrich_holding_nav(isin, scheme, avg_nav)
-            current_value = current if current > 0 else units * live_nav
-
-            holdings.append(
-                MFHolding(
-                    scheme_name=scheme,
-                    isin=isin,
-                    units=units,
-                    avg_nav=avg_nav,
-                    current_nav=live_nav,
-                    invested_amount=invested,
-                    current_value=current_value,
-                    category=_infer_category(scheme),
-                    expense_ratio=expense_ratio,
-                )
-            )
+            holding = _row_to_holding(row, len(holdings))
+            if holding is not None:
+                holdings.append(holding)
         except (ValueError, KeyError):
             continue
     return holdings
@@ -252,26 +271,41 @@ def parse_pdf_holdings(text: str) -> list[MFHolding]:
 
 # Overlap detection
 def detect_overlap(holdings: list[MFHolding]) -> list[OverlapPair]:
-    """Category-based overlap heuristic (production: replace with MFAPI holdings data)."""
+    """Category-based overlap heuristic.
+
+    Cross-category rules added:
+    - Index/ETF + Large Cap: ~65% overlap (both track Nifty 100 universe)
+    - Index/ETF + Flexi Cap: ~45% overlap
+    - Large Cap + Flexi Cap: ~40% overlap
+    """
     equity_funds = [h for h in holdings if h.category not in ("Liquid", "Debt")]
     pairs: list[OverlapPair] = []
+    _LARGE_CAP_STOCKS = ["HDFC Bank", "Reliance", "ICICI Bank", "Infosys", "TCS"]
+
+    _OVERLAP_MATRIX: dict[tuple[str, str], float] = {
+        ("Large Cap",       "Large Cap"):       65.0,
+        ("Index/ETF",       "Index/ETF"):       80.0,
+        ("Flexi/Multi Cap", "Flexi/Multi Cap"): 45.0,
+        # Cross-category
+        ("Index/ETF",       "Large Cap"):       65.0,
+        ("Large Cap",       "Index/ETF"):       65.0,
+        ("Index/ETF",       "Flexi/Multi Cap"): 45.0,
+        ("Flexi/Multi Cap", "Index/ETF"):       45.0,
+        ("Large Cap",       "Flexi/Multi Cap"): 40.0,
+        ("Flexi/Multi Cap", "Large Cap"):       40.0,
+    }
 
     for i in range(len(equity_funds)):
         for j in range(i + 1, len(equity_funds)):
             a, b = equity_funds[i], equity_funds[j]
-            if a.category == b.category and a.category in ("Large Cap", "Index/ETF", "Flexi/Multi Cap"):
-                if a.category == "Large Cap":
-                    overlap_pct = 65.0
-                elif a.category == "Index/ETF":
-                    overlap_pct = 80.0
-                else:
-                    overlap_pct = 45.0
+            overlap_pct = _OVERLAP_MATRIX.get((a.category, b.category))
+            if overlap_pct is not None:
                 pairs.append(
                     OverlapPair(
                         fund_a=a.scheme_name,
                         fund_b=b.scheme_name,
                         overlap_percent=overlap_pct,
-                        common_stocks=["HDFC Bank", "Reliance", "ICICI Bank", "Infosys", "TCS"],
+                        common_stocks=_LARGE_CAP_STOCKS,
                     )
                 )
     return pairs
@@ -309,6 +343,16 @@ def generate_rebalancing_suggestions(
     if high_expense:
         suggestions.append(
             f"{len(high_expense)} fund(s) have high expense ratios — switch to direct plans to save 0.5–1.5% p.a."
+        )
+
+    # Only suggest switching to direct if not already on direct plans
+    regular_plan_funds = [
+        h for h in holdings
+        if "direct" not in h.scheme_name.lower() and h.expense_ratio is not None and h.expense_ratio > 0.5
+    ]
+    if regular_plan_funds and not high_expense:
+        suggestions.append(
+            f"{len(regular_plan_funds)} fund(s) appear to be regular plans — switch to direct to save ~0.5–1% p.a."
         )
 
     categories = {h.category for h in holdings}
