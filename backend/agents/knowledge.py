@@ -20,7 +20,8 @@ NEW REGIME (default from FY 2023-24):
 - Slabs: ₹0–4L: nil | ₹4–8L: 5% | ₹8–12L: 10% | ₹12–16L: 15% | ₹16–20L: 20% | ₹20–24L: 25% | above ₹24L: 30%
 - Standard deduction: ₹75,000
 - Rebate (87A): zero tax if taxable income ≤ ₹12,00,000 (max rebate ₹60,000)
-- Deductions 80C / 80D / NPS / HRA: NOT available
+- Deductions NOT available: 80C / 80D / HRA / NPS 80CCD(1B)
+- NPS 80CCD(2) (employer contribution): allowed up to 14% of basic salary
 
 OLD REGIME:
 - Slabs: ₹0–2.5L: nil | ₹2.5–5L: 5% | ₹5–10L: 20% | above ₹10L: 30%
@@ -43,7 +44,7 @@ CAPITAL GAINS (equity):
 
 INVESTMENT LOCK-INS:
 - ELSS: 3 years | PPF: 15 years | NPS: till age 60
-- EPF: mandatory for salary ≤ ₹15,000/month (employer + employee 12% each)
+- EPF: mandatory coverage threshold ₹15,000/month basic salary; employer + employee 12% each
 
 RULES OF THUMB (use these, never invent alternatives):
 - Emergency fund: 6 months of expenses — liquid instruments only (savings a/c, liquid MF)
