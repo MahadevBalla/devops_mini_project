@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/vercel-tabs';
+import { ScrollAnimatedText } from '@/components/text-scroll-animation';
 import { Sparkles, ArrowRight, Heart, Flame, DollarSign, TrendingUp } from 'lucide-react';
 
 const TAB_ITEMS = [
@@ -68,7 +69,7 @@ export default function Home() {
               Your <span className="text-primary">AI-powered</span> financial command centre
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get personalized financial planning advice powered by our advanced AI agents. From tax optimization to retirement planning, we've got you covered.
+              Get personalized financial planning advice powered by our advanced AI agents. From tax optimization to retirement planning, we&apos;ve got you covered.
             </p>
           </div>
 
@@ -105,7 +106,9 @@ export default function Home() {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="space-y-12">
           <div className="text-center space-y-4">
-            <h2 className="text-3xl sm:text-4xl font-bold">What You Get</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold">
+              <ScrollAnimatedText text="What You Get" charClassName="text-foreground" />
+            </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Explore our comprehensive suite of financial planning tools designed for Indian investors
             </p>

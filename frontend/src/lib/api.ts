@@ -22,7 +22,7 @@ export class ApiException extends Error {
   }
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   status: number;
 }
@@ -87,10 +87,19 @@ class ApiService {
             errorData = data;
           } else if (data.detail) {
             // FastAPI validation error format: { detail: string | object }
-            errorData = {
-              error: typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail),
-              code: "VALIDATION_ERROR",
-            };
+            const detail = data.detail;
+            if (typeof detail === "object" && detail !== null && "error" in detail) {
+              const detailObj = detail as { error: string; code?: string };
+              errorData = {
+                error: detailObj.error,
+                code: detailObj.code ?? "HTTP_ERROR",
+              };
+            } else {
+              errorData = {
+                error: typeof detail === "string" ? detail : JSON.stringify(detail),
+                code: "VALIDATION_ERROR",
+              };
+            }
           } else {
             // Generic object error
             errorData = {
@@ -128,7 +137,7 @@ class ApiService {
 
   async post<T>(
     endpoint: string,
-    data?: any,
+    data?: unknown,
     headers?: Record<string, string>
   ): Promise<T> {
     return this.request<T>(endpoint, {
@@ -140,7 +149,7 @@ class ApiService {
 
   async put<T>(
     endpoint: string,
-    data?: any,
+    data?: unknown,
     headers?: Record<string, string>
   ): Promise<T> {
     return this.request<T>(endpoint, {

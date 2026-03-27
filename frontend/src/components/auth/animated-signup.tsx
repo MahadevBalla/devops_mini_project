@@ -172,6 +172,7 @@ const EyeBall = ({
 
 export function AnimatedSignup() {
   const router = useRouter();
+  const [checking, setChecking] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -199,10 +200,12 @@ export function AnimatedSignup() {
   const yellowRef = useRef<HTMLDivElement>(null);
   const orangeRef = useRef<HTMLDivElement>(null);
 
-  // Redirect to profile if already authenticated
+  // Auth guard: prevent rendering signup page for authenticated users.
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      router.push("/profile");
+      router.replace("/dashboard");
+    } else {
+      setChecking(false);
     }
   }, [router]);
 
@@ -414,6 +417,8 @@ export function AnimatedSignup() {
     // Redirect to profile page after successful verification
     router.push("/profile");
   };
+
+  if (checking) return null;
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">

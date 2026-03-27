@@ -2,9 +2,24 @@
  * Finance API service — typed wrappers for all 6 backend endpoints
  */
 import { api } from "@/lib/api";
+import { authService } from "@/lib/auth";
 import type { HealthScoreApiResponse, HealthScorePayload } from "@/lib/health-score-types";
 import type { FIREPayload, FIREApiResponse } from "@/lib/fire-types";
 import type { TaxPayload, TaxApiResponse } from "@/lib/tax-types";
+
+function authHeaders(): Record<string, string> {
+  const token = authService.getAccessToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  return { Authorization: `Bearer ${token}` };
+}
+
+function authedPost<T>(endpoint: string, data: unknown): Promise<T> {
+  return authService.authenticatedRequest(() =>
+    api.post<T>(endpoint, data, authHeaders())
+  );
+}
 
 // ─── Shared types ────────────────────────────────────────────────────────────
 
@@ -41,7 +56,10 @@ export interface HealthScoreResponse {
 }
 
 export async function getHealthScore(data: HealthScorePayload): Promise<HealthScoreApiResponse> {
-  return api.post<HealthScoreApiResponse>("/api/health-score", data);
+  return authedPost<HealthScoreApiResponse>("/api/health-score", {
+    profile: data,
+    use_profile: false,
+  });
 }
 
 // ─── FIRE Planner ─────────────────────────────────────────────────────────────
@@ -79,7 +97,10 @@ export interface FIREResponse {
 }
 
 export async function getFIREPlan(data: FIREPayload): Promise<FIREApiResponse> {
-  return api.post<FIREApiResponse>("/api/fire-planner", data);
+  return authedPost<FIREApiResponse>("/api/fire-planner", {
+    profile: data,
+    use_profile: false,
+  });
 }
 
 // ─── Tax Wizard ───────────────────────────────────────────────────────────────
@@ -105,7 +126,10 @@ export interface TaxResponse {
 }
 
 export async function getTaxAnalysis(data: TaxPayload): Promise<TaxApiResponse> {
-  return api.post<TaxApiResponse>("/api/tax-wizard", data);
+  return authedPost<TaxApiResponse>("/api/tax-wizard", {
+    profile: data,
+    use_profile: false,
+  });
 }
 
 // ─── Life Event ───────────────────────────────────────────────────────────────
@@ -135,7 +159,7 @@ export interface LifeEventResponse {
 }
 
 export async function getLifeEventPlan(data: Record<string, unknown>): Promise<LifeEventResponse> {
-  return api.post<LifeEventResponse>("/api/life-event", data);
+  return authedPost<LifeEventResponse>("/api/life-event", data);
 }
 
 // ─── Couple Planner ───────────────────────────────────────────────────────────
@@ -161,7 +185,7 @@ export interface CouplePlanResponse {
 }
 
 export async function getCouplePlan(data: Record<string, unknown>): Promise<CouplePlanResponse> {
-  return api.post<CouplePlanResponse>("/api/couple-planner", data);
+  return authedPost<CouplePlanResponse>("/api/couple-planner", data);
 }
 
 // ─── MF X-Ray ─────────────────────────────────────────────────────────────────
@@ -208,13 +232,16 @@ export async function getMFXray(file: File): Promise<MFXrayResponse> {
   const formData = new FormData();
   formData.append("file", file);
   const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-  const response = await fetch(`${baseURL}/api/mf-xray`, {
-    method: "POST",
-    body: formData,
+  return authService.authenticatedRequest(async () => {
+    const response = await fetch(`${baseURL}/api/mf-xray`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: "Upload failed", code: "UPLOAD_ERROR" }));
+      throw new Error(err.error || "Upload failed");
+    }
+    return response.json();
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Upload failed", code: "UPLOAD_ERROR" }));
-    throw new Error(err.error || "Upload failed");
-  }
-  return response.json();
 }
