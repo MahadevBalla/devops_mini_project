@@ -11,7 +11,7 @@ import logging
 from agents.knowledge import INDIA_FINANCE_FACTS
 from core.exceptions import LLMUnavailableError
 from core.llm_client import structured_chat
-from models.schemas import AgentAdvice, LifeEventResult, UserProfile
+from models import AgentAdvice, LifeEventResult, UserProfile
 
 logger = logging.getLogger(__name__)
 

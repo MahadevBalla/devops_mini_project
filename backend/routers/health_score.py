@@ -16,7 +16,7 @@ from agents.mentor_agent import generate_health_advice
 from core.exceptions import MoneyMentorError, ValidationError
 from db.session_store import append_log, create_session, update_session_state
 from finance.health import calculate_money_health_score
-from models.schemas import ErrorResponse, HealthScoreResponse
+from models import ErrorResponse, HealthScoreResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["health-score"])

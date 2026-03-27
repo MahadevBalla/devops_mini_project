@@ -9,7 +9,7 @@ from __future__ import annotations
 from core.config import settings
 from finance.fire import required_monthly_sip
 from finance.tax import compute_old_regime_tax
-from models.schemas import CoupleOptimisation, CoupleProfile, UserProfile
+from models import CoupleOptimisation, CoupleProfile, UserProfile
 
 
 def _net_worth(profile: UserProfile) -> float:
@@ -110,7 +110,7 @@ def _joint_tax_saving(a: UserProfile, b: UserProfile) -> float:
     Estimate combined tax saving if both partners fully optimise old-regime deductions.
     """
     from finance.tax_constants import CURRENT as TAX
-    from models.schemas import TaxDeductions
+    from models import TaxDeductions
 
     def max_deductions() -> TaxDeductions:
         return TaxDeductions(

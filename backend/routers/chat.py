@@ -19,7 +19,7 @@ from sqlalchemy import select
 from core.exceptions import LLMUnavailableError
 from core.llm_client import chat_completion
 from db.session_store import AgentLog, AsyncSessionLocal, Session, append_log
-from models.schemas import ChatRequest, ChatResponse
+from models import ChatRequest, ChatResponse
 from rag.knowledge_base import query as rag_query
 
 logger = logging.getLogger(__name__)

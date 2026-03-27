@@ -10,7 +10,7 @@ import datetime
 from typing import Optional
 
 from core.config import settings
-from models.schemas import FIREPlan, Goal, SIPGoal, UserProfile, YearlyProjection
+from models import FIREPlan, Goal, SIPGoal, UserProfile, YearlyProjection
 
 _CURRENT_YEAR = datetime.date.today().year
 

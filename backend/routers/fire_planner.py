@@ -15,7 +15,7 @@ from agents.mentor_agent import generate_fire_advice
 from core.exceptions import MoneyMentorError, ValidationError
 from db.session_store import append_log, create_session, update_session_state
 from finance.fire import build_fire_plan
-from models.schemas import ErrorResponse, FIREPlanResponse
+from models import ErrorResponse, FIREPlanResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["fire-planner"])

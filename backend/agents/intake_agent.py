@@ -13,7 +13,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from core.exceptions import LLMUnavailableError, ValidationError
 from core.llm_client import structured_chat
-from models.schemas import UserProfile
+from models import UserProfile
 
 logger = logging.getLogger(__name__)
 

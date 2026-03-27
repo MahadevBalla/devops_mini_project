@@ -8,7 +8,7 @@ Every function is independently unit-testable.
 from __future__ import annotations
 
 from core.config import settings
-from models.schemas import (
+from models import (
     AssetAllocation,
     DimensionScore,
     MoneyHealthResult,

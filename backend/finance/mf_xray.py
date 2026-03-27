@@ -23,7 +23,7 @@ from scipy.optimize import brentq
 
 from core.config import settings
 from finance.amfi import enrich_holding_nav
-from models.schemas import MFHolding, MFXRayResult, OverlapPair
+from models import MFHolding, MFXRayResult, OverlapPair
 
 logger = logging.getLogger(__name__)
 

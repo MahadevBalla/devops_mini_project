@@ -6,7 +6,7 @@ Finance engine tests only need sample_profile — no DB, no LLM.
 
 import pytest
 
-from models.schemas import (
+from models import (
     AssetAllocation,
     DebtItem,
     Goal,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from core.config import settings
 from finance.tax_constants import CURRENT as TAX
-from models.schemas import (
+from models import (
     LifeEventAllocation,
     LifeEventInput,
     LifeEventResult,

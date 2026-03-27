@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from finance.tax_constants import CURRENT as TAX
 from finance.tax_constants import IndiaFiscalYearConstants
-from models.schemas import TaxDeductions, TaxRegime, TaxRegimeComparison, UserProfile
+from models import TaxDeductions, TaxRegime, TaxRegimeComparison, UserProfile
 
 
 def _apply_slabs(taxable: float, constants: IndiaFiscalYearConstants, regime: TaxRegime) -> float:

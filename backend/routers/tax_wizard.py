@@ -15,7 +15,7 @@ from agents.mentor_agent import generate_tax_advice
 from core.exceptions import MoneyMentorError, ValidationError
 from db.session_store import append_log, create_session, update_session_state
 from finance.tax import compare_tax_regimes
-from models.schemas import ErrorResponse, TaxWizardResponse
+from models import ErrorResponse, TaxWizardResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["tax-wizard"])

@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from finance.couple import _hra_benefit, _net_worth, optimise_couple_finances
-from models.schemas import (
+from models import (
     AssetAllocation,
     CoupleProfile,
     DebtItem,

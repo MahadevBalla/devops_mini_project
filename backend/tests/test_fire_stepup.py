@@ -17,7 +17,7 @@ from finance.fire import (
     required_monthly_sip,
     required_stepup_sip,
 )
-from models.schemas import RiskProfile, UserProfile
+from models import RiskProfile, UserProfile
 
 
 def make_profile(**overrides) -> UserProfile:

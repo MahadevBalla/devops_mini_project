@@ -11,7 +11,7 @@ import logging
 from agents.knowledge import INDIA_FINANCE_FACTS
 from core.exceptions import LLMUnavailableError
 from core.llm_client import structured_chat
-from models.schemas import AgentAdvice, CoupleOptimisation, CoupleProfile
+from models import AgentAdvice, CoupleOptimisation, CoupleProfile
 
 logger = logging.getLogger(__name__)
 

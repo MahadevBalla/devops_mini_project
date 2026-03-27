@@ -23,7 +23,7 @@ from finance.mf_xray import (
     parse_cams_pdf,
     parse_pdf_holdings,
 )
-from models.schemas import ErrorResponse, MFHolding, MFXRayResponse
+from models import ErrorResponse, MFHolding, MFXRayResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["mf-xray"])

@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from finance.life_event import analyse_life_event
-from models.schemas import (
+from models import (
     DebtItem,
     InsuranceCoverage,
     LifeEventInput,

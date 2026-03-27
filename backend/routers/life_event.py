@@ -15,7 +15,7 @@ from agents.life_event_agent import generate_life_event_advice
 from core.exceptions import MoneyMentorError, ValidationError
 from db.session_store import append_log, create_session, update_session_state
 from finance.life_event import analyse_life_event
-from models.schemas import ErrorResponse, LifeEventInput, LifeEventResponse, LifeEventType
+from models import ErrorResponse, LifeEventInput, LifeEventResponse, LifeEventType
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["life-event"])

@@ -46,7 +46,7 @@ from db.session_store import (
     update_user_last_login,
     verify_user_email,
 )
-from models.schemas import (
+from models import (
     EmailVerificationConfirm,
     EmailVerificationRequest,
     ErrorResponse,

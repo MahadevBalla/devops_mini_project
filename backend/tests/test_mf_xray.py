@@ -19,7 +19,7 @@ from finance.mf_xray import (
     generate_rebalancing_suggestions,
     parse_cams_csv,
 )
-from models.schemas import MFHolding
+from models import MFHolding
 
 
 def make_holding(

@@ -13,7 +13,7 @@ import re
 
 from core.exceptions import LLMUnavailableError
 from core.llm_client import structured_chat
-from models.schemas import AgentAdvice
+from models import AgentAdvice
 
 logger = logging.getLogger(__name__)
 

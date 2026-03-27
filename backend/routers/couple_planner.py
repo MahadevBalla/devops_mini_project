@@ -16,7 +16,7 @@ from agents.intake_agent import run_intake_agent
 from core.exceptions import MoneyMentorError, ValidationError
 from db.session_store import append_log, create_session, update_session_state
 from finance.couple import optimise_couple_finances
-from models.schemas import CoupleProfile, CoupleResponse, ErrorResponse, Goal
+from models import CoupleProfile, CoupleResponse, ErrorResponse, Goal
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["couple-planner"])
