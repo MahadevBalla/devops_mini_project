@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertTriangle, Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { cn } from "@/lib/utils";
 import type { HealthScoreApiResponse, DimensionScore } from "@/lib/health-score-types";
@@ -73,7 +74,9 @@ function DimensionCard({ dim }: { dim: DimensionScore }) {
       <div className="space-y-1">
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>Score</span>
-          <span className="font-semibold text-foreground">{Math.round(dim.score)}/100</span>
+          <span className="font-semibold text-foreground">
+            <AnimatedNumber value={dim.score} format={(n) => `${Math.round(n)}/100`} />
+          </span>
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div
@@ -194,7 +197,9 @@ function WhatIfBar({ dimensions }: { dimensions: DimensionScore[] }) {
               </div>
               <div>
                 <p className="text-xs font-semibold leading-tight">{name}</p>
-                <p className="text-xs text-green-600 font-medium">+~{potentialGain} pts potential</p>
+                <p className="text-xs text-green-600 font-medium">
+                  +~<AnimatedNumber value={potentialGain} duration={0.6} />{" "}pts potential
+                </p>
               </div>
             </div>
           );
@@ -228,7 +233,11 @@ export function HealthScoreResults({ response, onReset }: Props) {
                   "text-lg font-bold mt-0.5",
                   result.monthly_surplus >= 0 ? "text-green-600" : "text-destructive"
                 )}>
-                  {result.monthly_surplus < 0 ? "-" : ""}₹{Math.abs(result.monthly_surplus).toLocaleString("en-IN")}
+                  {result.monthly_surplus < 0 ? "-" : ""}₹
+                  <AnimatedNumber
+                    value={Math.abs(result.monthly_surplus)}
+                    format={(n) => Math.round(n).toLocaleString("en-IN")}
+                  />
                 </p>
               </div>
               <div className="bg-muted rounded-xl p-3">
@@ -237,7 +246,11 @@ export function HealthScoreResults({ response, onReset }: Props) {
                   "text-lg font-bold mt-0.5",
                   result.total_net_worth >= 0 ? "text-foreground" : "text-destructive"
                 )}>
-                  {result.total_net_worth < 0 ? "-" : ""}₹{Math.abs(result.total_net_worth).toLocaleString("en-IN")}
+                  {result.total_net_worth < 0 ? "-" : ""}₹
+                  <AnimatedNumber
+                    value={Math.abs(result.total_net_worth)}
+                    format={(n) => Math.round(n).toLocaleString("en-IN")}
+                  />
                 </p>
               </div>
             </div>

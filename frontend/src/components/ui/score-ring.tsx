@@ -5,6 +5,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface ScoreRingProps {
   score: number;
@@ -60,7 +61,7 @@ export function ScoreRing({ score, grade, size = 160 }: ScoreRingProps) {
       </svg>
       <div className="-mt-[calc(160px/2+24px)] text-center" style={{ marginTop: -(size / 2 + 28) }}>
         <p className="text-4xl font-bold" style={{ color }}>
-          {Math.round(animatedScore)}
+          <AnimatedNumber value={animatedScore} format={(n) => Math.round(n).toString()} />
         </p>
         <p className="text-lg font-semibold text-muted-foreground">Grade {grade}</p>
       </div>

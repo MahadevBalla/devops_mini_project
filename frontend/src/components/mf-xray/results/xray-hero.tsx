@@ -1,9 +1,10 @@
 // frontend/src/components/mf-xray/results/xray-hero.tsx
 import { cn } from "@/lib/utils";
 import {
-  fmt, fmtShort, fmtPct,
+  fmtShort,
   type MFXRayResult,
 } from "@/lib/mf-xray-types";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface Props { result: MFXRayResult }
 
@@ -15,19 +16,19 @@ export function XRayHero({ result }: Props) {
     benchmark_base, benchmark_optimistic,
   } = result;
 
-  const gain       = total_current_value - total_invested;
+  const gain = total_current_value - total_invested;
   const isPositive = gain >= 0;
-  const hasXirr    = overall_xirr != null;
+  const hasXirr = overall_xirr != null;
   const beatMarket = (xirr_vs_benchmark ?? 0) > 0;
 
   // Benchmark bar: position XIRR on a scale from 0 to optimistic+4
-  const scale   = benchmark_optimistic + 4;
+  const scale = benchmark_optimistic + 4;
   const xirrPct = hasXirr
     ? Math.min(Math.max((overall_xirr! / scale) * 100, 2), 98)
     : null;
   const conservativePct = (benchmark_conservative / scale) * 100;
-  const basePct         = (benchmark_base        / scale) * 100;
-  const optimisticPct   = (benchmark_optimistic   / scale) * 100;
+  const basePct = (benchmark_base / scale) * 100;
+  const optimisticPct = (benchmark_optimistic / scale) * 100;
 
   return (
     <div className={cn(
@@ -46,7 +47,7 @@ export function XRayHero({ result }: Props) {
           <div>
             <p className="text-lg font-bold text-foreground">Portfolio X-Ray</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {result.holdings.length} fund{result.holdings.length !== 1 ? "s" : ""} · {fmtShort(total_invested)} invested
+              {result.holdings.length} fund{result.holdings.length !== 1 ? "s" : ""} · <AnimatedNumber value={total_invested} format={fmtShort} /> invested
             </p>
           </div>
         </div>
@@ -58,7 +59,7 @@ export function XRayHero({ result }: Props) {
               ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
               : "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
           )}>
-            {beatMarket ? "↑" : "↓"} {Math.abs(xirr_vs_benchmark!).toFixed(1)}% vs Nifty
+            {beatMarket ? "↑" : "↓"} <AnimatedNumber value={Math.abs(xirr_vs_benchmark!)} format={(n) => `${n.toFixed(1)}%`} /> vs Nifty
           </div>
         )}
       </div>
@@ -68,8 +69,10 @@ export function XRayHero({ result }: Props) {
         {/* Current value */}
         <div className="bg-white/60 dark:bg-white/10 border border-white/40 dark:border-white/20 rounded-xl p-3">
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Current Value</p>
-          <p className="text-base font-bold text-foreground mt-1">{fmtShort(total_current_value)}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Invested: {fmtShort(total_invested)}</p>
+          <p className="text-base font-bold text-foreground mt-1">
+            <AnimatedNumber value={total_current_value} format={fmtShort} />
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Invested: <AnimatedNumber value={total_invested} format={fmtShort} /></p>
         </div>
 
         {/* P&L */}
@@ -82,11 +85,11 @@ export function XRayHero({ result }: Props) {
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Total Gain / Loss</p>
           <p className={cn("text-base font-bold mt-1",
             isPositive ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300")}>
-            {isPositive ? "+" : ""}{fmtShort(gain)}
+            {isPositive ? "+" : "-"}<AnimatedNumber value={Math.abs(gain)} format={fmtShort} />
           </p>
           <p className={cn("text-[10px] font-semibold mt-0.5",
             isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-            {fmtPct(absolute_return_pct, 1)}
+            {absolute_return_pct >= 0 ? "+" : ""}<AnimatedNumber value={absolute_return_pct} format={(n) => `${n.toFixed(1)}%`} />
           </p>
         </div>
 
@@ -99,7 +102,7 @@ export function XRayHero({ result }: Props) {
         )}>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">XIRR p.a.</p>
           <p className="text-base font-bold text-foreground mt-1">
-            {hasXirr ? `${overall_xirr!.toFixed(1)}%` : "N/A"}
+            {hasXirr ? <AnimatedNumber value={overall_xirr!} format={(n) => `${n.toFixed(1)}%`} /> : "N/A"}
           </p>
           <p className="text-[10px] text-muted-foreground mt-0.5">
             {hasXirr ? `Nifty base: ${benchmark_base}%` : "Need purchase dates"}
@@ -112,11 +115,16 @@ export function XRayHero({ result }: Props) {
             Alpha vs Nifty
           </p>
           <p className={cn("text-base font-bold mt-1",
-            !hasXirr                    ? "text-muted-foreground"
-            : beatMarket                ? "text-green-700 dark:text-green-300"
-            :                             "text-red-700 dark:text-red-300"
+            !hasXirr ? "text-muted-foreground"
+              : beatMarket ? "text-green-700 dark:text-green-300"
+                : "text-red-700 dark:text-red-300"
           )}>
-            {hasXirr ? fmtPct(xirr_vs_benchmark, 1) : "N/A"}
+            {hasXirr ? (
+              <>
+                {(xirr_vs_benchmark ?? 0) >= 0 ? "+" : ""}
+                <AnimatedNumber value={xirr_vs_benchmark ?? 0} format={(n) => `${n.toFixed(1)}%`} />
+              </>
+            ) : "N/A"}
           </p>
           <p className="text-[10px] text-muted-foreground mt-0.5">
             {hasXirr

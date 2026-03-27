@@ -2,6 +2,7 @@
 import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { overlapSeverity, type OverlapPair } from "@/lib/mf-xray-types";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface Props { pairs: OverlapPair[] }
 
@@ -87,7 +88,13 @@ export function OverlapPairs({ pairs }: Props) {
                       </p>
                     </div>
                     <div className="flex-shrink-0 text-right space-y-1">
-                      <p className="text-base font-bold text-foreground">{p.overlap_percent.toFixed(0)}%</p>
+                      <p className="text-base font-bold text-foreground">
+                        <AnimatedNumber
+                          value={p.overlap_percent}
+                          format={(n) => `${n.toFixed(0)}%`}
+                          duration={0.8}
+                        />
+                      </p>
                       <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", cfg.badge)}>
                         {cfg.label}
                       </span>

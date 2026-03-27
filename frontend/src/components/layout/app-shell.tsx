@@ -5,6 +5,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { PageTransition } from "./page-transition";
+
 import {
   Settings, LogOut, Loader2, Sparkles,
   LayoutDashboard, MessageCircle, HeartPulse,
@@ -136,7 +138,7 @@ export function AppShell({ children }: AppShellProps) {
                         className="absolute inset-0 rounded-lg bg-accent"
                         initial={{ opacity: 0, scale: 0.97 }}
                         whileHover={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        transition={{ duration: 0.15 }}
                       />
                     )}
 
@@ -177,15 +179,69 @@ export function AppShell({ children }: AppShellProps) {
           ))}
         </nav>
 
-        {/* Footer — unchanged */}
+        {/* Footer */}
         <div className="border-t border-border px-3 py-3 flex-shrink-0 space-y-1">
-          <Link
-            href="/profile"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </Link>
+
+          {/* ── Settings link — now animated like nav items ── */}
+          {(() => {
+            const active = pathname === "/profile" || pathname.startsWith("/profile/");
+            return (
+              <Link
+                href="/profile"
+                onClick={() => setSidebarOpen(false)}
+                className="relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm group"
+              >
+                {/* Active sliding pill — uses SAME layoutId as nav items */}
+                {active && (
+                  <motion.div
+                    layoutId="sidebar-active-pill"
+                    className="absolute inset-0 rounded-lg bg-primary/10"
+                    transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                  />
+                )}
+
+                {/* Hover pill */}
+                {!active && (
+                  <motion.div
+                    className="absolute inset-0 rounded-lg bg-accent"
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    whileHover={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
+                  />
+                )}
+
+                {/* Active left border accent — uses SAME layoutId as nav items */}
+                {active && (
+                  <motion.div
+                    layoutId="sidebar-active-border"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-primary rounded-full"
+                    transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                  />
+                )}
+
+                <Settings
+                  className={cn(
+                    "relative z-10 h-4 w-4 flex-shrink-0 transition-colors duration-150",
+                    active
+                      ? "text-primary"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "relative z-10 transition-colors duration-150",
+                    active
+                      ? "text-primary font-medium"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                >
+                  Settings
+                </span>
+              </Link>
+            );
+          })()}
+
+          {/* Logout button — no pill, keep as-is */}
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
@@ -219,7 +275,9 @@ export function AppShell({ children }: AppShellProps) {
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-            {children}
+            <PageTransition>
+              {children}
+            </PageTransition>
           </div>
         </main>
       </div>

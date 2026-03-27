@@ -5,10 +5,11 @@ import { useState } from "react";
 import { ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  fmt, fmtShort, fmtPct,
+  fmtShort,
   holdingGain, holdingGainPct, expenseDrag,
   categoryColor, type MFHolding,
 } from "@/lib/mf-xray-types";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface Props {
   holdings: MFHolding[];
@@ -16,6 +17,25 @@ interface Props {
 }
 
 type SortKey = "gain" | "invested" | "current" | "name";
+
+interface SortBtnProps {
+  col: SortKey;
+  sortKey: SortKey;
+  onToggle: (key: SortKey) => void;
+}
+
+function SortBtn({ col, sortKey, onToggle }: SortBtnProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(col)}
+      className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+    >
+      <ArrowUpDown className={cn("h-3 w-3",
+        sortKey === col ? "text-primary" : "text-muted-foreground")} />
+    </button>
+  );
+}
 
 export function HoldingsTable({ holdings, highExpenseFunds }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("gain");
@@ -42,19 +62,6 @@ export function HoldingsTable({ holdings, highExpenseFunds }: Props) {
   const isHighExpense = (name: string) =>
     highExpenseFunds.some((f) => f.startsWith(name.split(" ")[0]));
 
-  function SortBtn({ col }: { col: SortKey }) {
-    return (
-      <button
-        type="button"
-        onClick={() => toggleSort(col)}
-        className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
-      >
-        <ArrowUpDown className={cn("h-3 w-3",
-          sortKey === col ? "text-primary" : "text-muted-foreground")} />
-      </button>
-    );
-  }
-
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       {/* Header */}
@@ -76,19 +83,19 @@ export function HoldingsTable({ holdings, highExpenseFunds }: Props) {
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground w-[38%]">
-                <div className="flex items-center gap-1">Fund <SortBtn col="name" /></div>
+                <div className="flex items-center gap-1">Fund <SortBtn col="name" sortKey={sortKey} onToggle={toggleSort} /></div>
               </th>
               <th className="px-3 py-2.5 text-left text-xs font-medium text-muted-foreground">
                 Category
               </th>
               <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                <div className="flex items-center justify-end gap-1">Invested <SortBtn col="invested" /></div>
+                <div className="flex items-center justify-end gap-1">Invested <SortBtn col="invested" sortKey={sortKey} onToggle={toggleSort} /></div>
               </th>
               <th className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                <div className="flex items-center justify-end gap-1">Current <SortBtn col="current" /></div>
+                <div className="flex items-center justify-end gap-1">Current <SortBtn col="current" sortKey={sortKey} onToggle={toggleSort} /></div>
               </th>
               <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">
-                <div className="flex items-center justify-end gap-1">Gain <SortBtn col="gain" /></div>
+                <div className="flex items-center justify-end gap-1">Gain <SortBtn col="gain" sortKey={sortKey} onToggle={toggleSort} /></div>
               </th>
             </tr>
           </thead>
@@ -145,11 +152,11 @@ export function HoldingsTable({ holdings, highExpenseFunds }: Props) {
                   <td className="px-4 py-3 text-right">
                     <p className={cn("text-xs font-bold",
                       isPos ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
-                      {isPos ? "+" : ""}{fmtShort(Math.abs(gain))}
+                      {isPos ? "+" : "-"}<AnimatedNumber value={Math.abs(gain)} format={fmtShort} duration={0.8} />
                     </p>
                     <p className={cn("text-[10px] font-semibold mt-0.5",
                       isPos ? "text-green-500" : "text-red-500")}>
-                      {fmtPct(gainPct, 1)}
+                      {gainPct >= 0 ? "+" : ""}<AnimatedNumber value={gainPct} format={(n) => `${n.toFixed(1)}%`} duration={0.8} />
                     </p>
                   </td>
                 </tr>
@@ -192,11 +199,11 @@ export function HoldingsTable({ holdings, highExpenseFunds }: Props) {
                 <div className="text-right flex-shrink-0">
                   <p className={cn("text-sm font-bold",
                     isPos ? "text-green-600" : "text-red-600")}>
-                    {isPos ? "+" : ""}{fmtShort(Math.abs(gain))}
+                    {isPos ? "+" : "-"}<AnimatedNumber value={Math.abs(gain)} format={fmtShort} duration={0.8} />
                   </p>
                   <p className={cn("text-[10px] font-semibold",
                     isPos ? "text-green-500" : "text-red-500")}>
-                    {fmtPct(gainPct, 1)}
+                    {gainPct >= 0 ? "+" : ""}<AnimatedNumber value={gainPct} format={(n) => `${n.toFixed(1)}%`} duration={0.8} />
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     {fmtShort(h.current_value)}

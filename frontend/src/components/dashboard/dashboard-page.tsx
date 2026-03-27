@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import {
   HeartPulse, Flame, Receipt, CalendarHeart, Users2, ScanLine, ArrowRight
 } from "lucide-react";
+import { StaggerItem, StaggerList } from "../ui/stagger-list";
 
 const TOOLS = [
   {
@@ -62,27 +63,32 @@ export function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {TOOLS.map((tool) => {
-            const Icon = tool.icon;
-            return (
-              <Link
-                key={tool.href}
-                href={tool.href}
-                className="group bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-start justify-between">
-                  <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                </div>
-                <h2 className="mt-4 text-sm font-semibold">{tool.label}</h2>
-                <p className="mt-1 text-xs text-muted-foreground">{tool.description}</p>
-              </Link>
-            );
-          })}
-        </div>
+        <StaggerList>
+          <StaggerItem>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {TOOLS.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <Link
+                    key={tool.href}
+                    href={tool.href}
+                    className="group bg-card border border-border rounded-xl p-5 hover:border-primary/50 hover:shadow-sm transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${tool.color}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <h2 className="mt-4 text-sm font-semibold">{tool.label}</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{tool.description}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </StaggerItem>
+        </StaggerList>
+
       </div>
     </AppShell>
   );

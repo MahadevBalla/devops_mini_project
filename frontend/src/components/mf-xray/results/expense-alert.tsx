@@ -1,7 +1,7 @@
 // frontend/src/components/mf-xray/results/expense-alert.tsx
 import { ShieldCheck, TrendingDown } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { expenseDrag, type MFHolding } from "@/lib/mf-xray-types";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface Props {
   highExpenseFunds: string[];   // engine strings: "FundName: X.XX% TER — consider..."
@@ -89,7 +89,7 @@ export function ExpenseAlert({ highExpenseFunds, holdings }: Props) {
                   <div className="flex-shrink-0 text-right">
                     <p className="text-xs text-muted-foreground">Annual drag</p>
                     <p className="text-sm font-bold text-amber-600">
-                      −₹{drag.toLocaleString("en-IN")}/yr
+                      -₹<AnimatedNumber value={drag} format={(n) => Math.round(n).toLocaleString("en-IN")} />/yr
                     </p>
                   </div>
                 )}
@@ -100,7 +100,9 @@ export function ExpenseAlert({ highExpenseFunds, holdings }: Props) {
                 <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/10 rounded-lg space-y-1">
                   <div className="flex justify-between text-[11px] text-muted-foreground">
                     <span>On ₹{(invested / 1e5).toFixed(1)}L invested</span>
-                    <span className="text-amber-600 font-medium">−₹{drag.toLocaleString("en-IN")}/yr</span>
+                    <span className="text-amber-600 font-medium">
+                      -₹<AnimatedNumber value={drag} format={(n) => Math.round(n).toLocaleString("en-IN")} />/yr
+                    </span>
                   </div>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
