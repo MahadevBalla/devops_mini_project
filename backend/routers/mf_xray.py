@@ -9,12 +9,13 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from agents.guardrail_agent import run_guardrail
 from agents.mf_xray_agent import generate_mf_xray_advice
+from core.dependencies import get_current_user
 from core.exceptions import MoneyMentorError
-from db.session_store import append_log, create_session, update_session_state
+from db.session_store import User, append_log, create_session, update_session_state
 from finance.amfi import ensure_nav_cache
 from finance.mf_xray import (
     analyse_portfolio,
@@ -23,7 +24,8 @@ from finance.mf_xray import (
     parse_cams_pdf,
     parse_pdf_holdings,
 )
-from models import ErrorResponse, MFHolding, MFXRayResponse
+from models.api_responses import ErrorResponse, MFXRayResponse
+from models.mf_xray import MFHolding
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["mf-xray"])
@@ -53,8 +55,9 @@ _PDF_MAGIC = b"%PDF"
 )
 async def mf_xray(
     file: UploadFile = File(..., description="CAMS or KFintech consolidated CSV/PDF statement"),
+    current_user: User = Depends(get_current_user),
 ) -> MFXRayResponse:
-    session_id = await create_session("mf_xray")
+    session_id = await create_session(current_user.id, "mf_xray")
     decision_log: list[dict] = []
 
     # Ensure AMFI cache is warm — no-op if already fresh from startup
@@ -186,7 +189,8 @@ async def mf_xray(
 
         await update_session_state(
             session_id,
-            "mf_xray",
+            current_user.id,
+            "mf",
             {
                 "total_invested": result.total_invested,
                 "total_current_value": result.total_current_value,

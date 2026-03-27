@@ -1,6 +1,9 @@
 """
 routers/couple_planner.py
 POST /api/couple-planner — Couple Joint Finance Optimiser.
+
+Takes two independent partner profiles — does not use FeatureRequest.
+Portfolio write not supported for couple (no single-user portfolio mapping).
 """
 
 from __future__ import annotations
@@ -8,15 +11,18 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from agents.couple_agent import generate_couple_advice
 from agents.guardrail_agent import run_guardrail
 from agents.intake_agent import run_intake_agent
+from core.dependencies import get_current_user
 from core.exceptions import MoneyMentorError, ValidationError
-from db.session_store import append_log, create_session, update_session_state
+from db.session_store import User, append_log, create_session, update_session_state
 from finance.couple import optimise_couple_finances
-from models import CoupleProfile, CoupleResponse, ErrorResponse, Goal
+from models.api_responses import CoupleResponse, ErrorResponse
+from models.user import Goal
+from models.couple import CoupleProfile
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["couple-planner"])
@@ -26,8 +32,11 @@ router = APIRouter(prefix="/api", tags=["couple-planner"])
     "/couple-planner",
     responses={422: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
-async def couple_planner(raw_data: dict) -> CoupleResponse:
-    session_id = await create_session("couple_planner")
+async def couple_planner(
+    raw_data: dict,
+    current_user: User = Depends(get_current_user),
+) -> CoupleResponse:
+    session_id = await create_session(current_user.id, "couple_planner")
     decision_log: list[dict] = []
 
     try:
@@ -102,6 +111,7 @@ async def couple_planner(raw_data: dict) -> CoupleResponse:
 
         await update_session_state(
             session_id,
+            current_user.id,
             "couple",
             {
                 "combined_net_worth": result.combined_net_worth,

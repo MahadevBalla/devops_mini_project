@@ -6,10 +6,9 @@ Also contains FeatureRequest (universal partial-input envelope).
 
 from __future__ import annotations
 
-import uuid as uuid_module
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, model_validator
 
 from models.common import AgentAdvice
 from models.couple import CoupleOptimisation
@@ -29,27 +28,41 @@ class ErrorResponse(BaseModel):
 
 class FeatureRequest(BaseModel):
     """
-    Universal partial-input envelope for all feature endpoints.
+    Universal input envelope for all feature endpoints.
 
-    use_profile=True  → load from Portfolio, merge any incoming overrides, save back.
-    use_profile=False → pure what-if; Portfolio never touched.
-    save_scenario=True → persist this run as a named Scenario (only when use_profile=False).
+    session_id is NOT accepted from the client — the server always creates
+    a new session per feature run, owned by the authenticated user.
+
+    Two strict modes — never mixed:
+      use_profile=True  → load portfolio.profile as-is; write derived result back.
+                          profile field must be absent/None.
+      use_profile=False → use profile field ONLY; portfolio never touched.
+                          save_scenario=True persists the run as a named Scenario.
     """
 
-    session_id: str
     use_profile: bool = True
     profile: Optional[dict] = None
     save_scenario: bool = False
     scenario_name: Optional[str] = None
 
-    @field_validator("session_id")
-    @classmethod
-    def validate_uuid(cls, v: str) -> str:
-        try:
-            uuid_module.UUID(v)
-        except ValueError:
-            raise ValueError("session_id must be a valid UUID")
-        return v
+    @model_validator(mode="after")
+    def validate_mode_consistency(self) -> FeatureRequest:
+        if self.use_profile and self.save_scenario:
+            raise ValueError(
+                "save_scenario=True is only valid when use_profile=False. "
+                "Portfolio runs do not create scenarios."
+            )
+        if self.use_profile and self.profile is not None:
+            raise ValueError(
+                "profile overrides are not allowed when use_profile=True. "
+                "Update your profile via PATCH /api/portfolio/profile instead."
+            )
+        if not self.use_profile and not self.profile:
+            raise ValueError(
+                "profile must be provided when use_profile=False. "
+                "What-if runs require explicit input data."
+            )
+        return self
 
 
 class SessionCreateResponse(BaseModel):
@@ -64,13 +77,28 @@ class PortfolioResponse(BaseModel):
     health: dict
     tax: dict
     mf: dict
+    couple: dict
+    life_event: dict
 
 
 class ScenarioSummary(BaseModel):
+    """Lightweight scenario view — used in list responses."""
+
     id: str
     name: str
     feature: str
     created_at: str
+    result: dict
+
+
+class ScenarioDetailResponse(BaseModel):
+    """Full scenario view including input_data — used for chat context switching."""
+
+    id: str
+    name: str
+    feature: str
+    created_at: str
+    input_data: dict
     result: dict
 
 

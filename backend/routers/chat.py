@@ -4,21 +4,30 @@ POST /api/chat          — standard JSON chat response
 GET  /api/chat/stream   — SSE streaming response
 
 Multi-turn conversation: history stored in DB session, sent with every LLM call.
+Session must be owned by the authenticated user — ownership enforced on every read.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
+from core.dependencies import get_current_user
 from core.exceptions import LLMUnavailableError
 from core.llm_client import chat_completion
-from db.session_store import AgentLog, AsyncSessionLocal, Session, append_log
+from db.session_store import (
+    AgentLog,
+    AsyncSessionLocal,
+    Session,
+    User,
+    append_log,
+    get_session_for_user,
+)
 from models import ChatRequest, ChatResponse
 from rag.knowledge_base import query as rag_query
 
@@ -51,13 +60,19 @@ When user asks about their financial plan (FIRE, health score, tax, etc.):
 """
 
 
-async def _get_chat_context(session_id: str) -> tuple[list[dict], str]:
+async def _get_chat_context(session_id: str, user_id: str) -> tuple[list[dict], str]:
     """
-    Returns (history, context_suffix) in a single DB transaction.
+    Ownership-enforced context fetch.
+    Returns (history, context_suffix) for the given session.
+    Raises 404 if the session does not exist or belongs to a different user.
+    """
+    session = await get_session_for_user(session_id, user_id)
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "Session not found", "code": "SESSION_NOT_FOUND"},
+        )
 
-    history        — last N user+assistant message pairs, chronological order.
-    context_suffix — stringified session state_json for system prompt injection.
-    """
     async with AsyncSessionLocal() as db:
         log_result = await db.execute(
             select(AgentLog)
@@ -67,9 +82,6 @@ async def _get_chat_context(session_id: str) -> tuple[list[dict], str]:
             .limit(_MAX_HISTORY_TURNS)
         )
         logs = list(reversed(log_result.scalars().all()))
-
-        sess_result = await db.execute(select(Session).where(Session.id == session_id))
-        session = sess_result.scalar_one_or_none()
 
     history = _parse_logs_to_history(logs)
     context_suffix = _parse_state_to_context(session)
@@ -97,7 +109,7 @@ def _fmt(x) -> str:
     return str(x) if x is not None else "N/A"
 
 
-def _parse_state_to_context(session: Session | None) -> str:
+def _parse_state_to_context(session: Optional[Session]) -> str:
     if not session or not session.state_json or session.state_json == "{}":
         return ""
     try:
@@ -119,10 +131,7 @@ def _parse_state_to_context(session: Session | None) -> str:
         )
         lines.append(f"- Projected FI age:      {fire.get('projected_fi_age', 'N/A')}")
         lines.append(f"- Years to FI:           {fire.get('years_to_fi', 'N/A')}")
-        if fire.get("on_track"):
-            lines.append("- Status: On track")
-        else:
-            lines.append("- Status: Off track")
+        lines.append(f"- Status: {'On track' if fire.get('on_track') else 'Off track'}")
 
     health = state.get("health")
     if health:
@@ -143,10 +152,12 @@ def _parse_state_to_context(session: Session | None) -> str:
     if tax:
         lines.append("----- Tax Wizard -----")
         lines.append(
-            f"- Old regime: ₹{tax.get('old_regime_tax', 0):,} | New: ₹{tax.get('new_regime_tax', 0):,}"
+            f"- Old regime: ₹{tax.get('old_regime_tax', 0):,} | "
+            f"New: ₹{tax.get('new_regime_tax', 0):,}"
         )
         lines.append(
-            f"- Recommended: {tax.get('recommended_regime')} | Saving: ₹{tax.get('savings_by_switching', 0):,}"
+            f"- Recommended: {tax.get('recommended_regime')} | "
+            f"Saving: ₹{tax.get('savings_by_switching', 0):,}"
         )
 
     profile = state.get("profile")
@@ -155,7 +166,8 @@ def _parse_state_to_context(session: Session | None) -> str:
         surplus = profile.get("monthly_gross_income", 0) - profile.get("monthly_expenses", 0)
         lines.append(f"- Age: {profile.get('age')} | Surplus: ₹{surplus:,}/mo")
         lines.append(
-            f"- Risk: {profile.get('risk_profile')} | Retirement age: {profile.get('retirement_age')}"
+            f"- Risk: {profile.get('risk_profile')} | "
+            f"Retirement age: {profile.get('retirement_age')}"
         )
 
     if not lines:
@@ -164,9 +176,12 @@ def _parse_state_to_context(session: Session | None) -> str:
     return "\n\n" + "\n".join(lines)
 
 
-@router.post("/chat")
-async def chat(req: ChatRequest) -> ChatResponse:
-    history, context_suffix = await _get_chat_context(req.session_id)
+@router.post("/chat", responses={404: {"description": "Session not found"}})
+async def chat(
+    req: ChatRequest,
+    current_user: User = Depends(get_current_user),
+) -> ChatResponse:
+    history, context_suffix = await _get_chat_context(req.session_id, current_user.id)
 
     rag_context = rag_query(req.message)
     rag_suffix = f"\n\nRELEVANT KNOWLEDGE BASE:\n{rag_context}" if rag_context else ""
@@ -197,14 +212,18 @@ async def chat(req: ChatRequest) -> ChatResponse:
     return ChatResponse(session_id=req.session_id, reply=reply)
 
 
-@router.get("/chat/stream")
-async def chat_stream(session_id: str, message: str) -> StreamingResponse:
+@router.get("/chat/stream", responses={404: {"description": "Session not found"}})
+async def chat_stream(
+    session_id: str,
+    message: str,
+    current_user: User = Depends(get_current_user),
+) -> StreamingResponse:
     """
     SSE streaming endpoint.
     Client receives: data: {"token": "..."} per token, then data: {"done": true}
     """
     return StreamingResponse(
-        _stream_reply(session_id, message),
+        _stream_reply(session_id, message, current_user.id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -213,14 +232,13 @@ async def chat_stream(session_id: str, message: str) -> StreamingResponse:
     )
 
 
-async def _stream_reply(session_id: str, message: str) -> AsyncGenerator[str, None]:
-    history, context_suffix = await _get_chat_context(session_id)
+async def _stream_reply(session_id: str, message: str, user_id: str) -> AsyncGenerator[str, None]:
+    history, context_suffix = await _get_chat_context(session_id, user_id)
 
     rag_context = rag_query(message)
     rag_suffix = f"\n\nRELEVANT KNOWLEDGE BASE:\n{rag_context}" if rag_context else ""
 
     system = _SYSTEM_PROMPT + context_suffix + rag_suffix
-
     messages = (
         [{"role": "system", "content": system}] + history + [{"role": "user", "content": message}]
     )

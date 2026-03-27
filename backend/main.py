@@ -27,6 +27,7 @@ from routers import (
     health_score,
     life_event,
     mf_xray,
+    portfolio,
     tax_wizard,
     voice,
 )
@@ -120,6 +121,7 @@ app.include_router(couple_planner.router)
 app.include_router(mf_xray.router)
 app.include_router(chat.router)
 app.include_router(voice.router)
+app.include_router(portfolio.router)
 
 
 # Health check

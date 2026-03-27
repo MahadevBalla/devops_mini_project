@@ -1,21 +1,26 @@
 """
 routers/life_event.py
 POST /api/life-event — Life Event Financial Advisor.
+
+Takes profile + event fields — does not use FeatureRequest.
 """
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from agents.guardrail_agent import run_guardrail
 from agents.intake_agent import run_intake_agent
 from agents.life_event_agent import generate_life_event_advice
+from core.dependencies import get_current_user
 from core.exceptions import MoneyMentorError, ValidationError
-from db.session_store import append_log, create_session, update_session_state
+from db.session_store import User, append_log, create_session, update_session_state
 from finance.life_event import analyse_life_event
-from models import ErrorResponse, LifeEventInput, LifeEventResponse, LifeEventType
+from models.api_responses import ErrorResponse, LifeEventResponse
+from models.common import LifeEventType
+from models.life_event import LifeEventInput
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["life-event"])
@@ -25,8 +30,11 @@ router = APIRouter(prefix="/api", tags=["life-event"])
     "/life-event",
     responses={422: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
 )
-async def life_event(raw_data: dict) -> LifeEventResponse:
-    session_id = await create_session("life_event")
+async def life_event(
+    raw_data: dict,
+    current_user: User = Depends(get_current_user),
+) -> LifeEventResponse:
+    session_id = await create_session(current_user.id, "life_event")
     decision_log: list[dict] = []
 
     try:
@@ -92,6 +100,7 @@ async def life_event(raw_data: dict) -> LifeEventResponse:
 
         await update_session_state(
             session_id,
+            current_user.id,
             "life_event",
             {
                 "event_type": result.event_type.value,
