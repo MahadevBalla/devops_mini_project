@@ -48,7 +48,10 @@ export function PortfolioPage() {
 
   const reset = () => { setResult(null); setFile(null); setError(""); };
   const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-  const pct = (n: number) => `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
+  const pct = (n: number | null | undefined) => {
+    if (n === null || n === undefined) return "N/A";
+    return `${n > 0 ? "+" : ""}${n.toFixed(2)}%`;
+  };
 
   return (
     <AppShell>
@@ -125,7 +128,7 @@ export function PortfolioPage() {
                   <p className={cn(
                     "text-base font-bold mt-1",
                     (m.label === "XIRR" || m.label === "Absolute return") &&
-                    result.result.overall_xirr > 0 ? "text-green-600" : ""
+                    result.result.overall_xirr != null && result.result.overall_xirr > 0 ? "text-green-600" : ""
                   )}>
                     {m.value}
                   </p>
