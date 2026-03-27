@@ -1,208 +1,415 @@
+// frontend/src/components/life-events/life-events-page.tsx
 "use client";
 
 import { useState } from "react";
-import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { LoadingState } from "@/components/ui/loading-state";
-import { ErrorState } from "@/components/ui/error-state";
+import {
+  ChevronLeft, ChevronRight, CheckCircle2,
+  Loader2, TrendingUp, Calculator,
+} from "lucide-react";
+import { AppShell }    from "@/components/layout/app-shell";
+import { Button }      from "@/components/ui/button";
 import { AdvicePanel } from "@/components/ui/advice-panel";
-import { getLifeEventPlan, type LifeEventResponse, type LifeEventType } from "@/lib/finance";
-import { Gift, Landmark, Heart, Baby, Briefcase, Home } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn }          from "@/lib/utils";
+import { getLifeEventPlan } from "@/lib/finance";
+import {
+  DEFAULT_LIFE_EVENT_FORM,
+  EVENT_META,
+  buildLifeEventPayload,
+  type LifeEventFormState,
+  type LifeEventApiResponse,
+} from "@/lib/life-event-types";
+import { StepEventPicker }       from "./steps/step-event-picker";
+import { StepProfile }           from "./steps/step-profile";
+import { StepEventDetails }      from "./steps/step-event-details";
+import { EventHero }             from "./results/event-hero";
+import { AllocationWaterfall }   from "./results/allocation-waterfall";
+import { InsuranceGaps }         from "./results/insurance-gaps";
+import { PriorityTimeline }      from "./results/priority-timeline";
 
-const EVENTS: { type: LifeEventType; label: string; icon: React.ElementType; description: string }[] = [
-  { type: "bonus", label: "Bonus", icon: Gift, description: "Annual bonus or windfall" },
-  { type: "inheritance", label: "Inheritance", icon: Landmark, description: "Inherited money or assets" },
-  { type: "marriage", label: "Marriage", icon: Heart, description: "Getting married" },
-  { type: "new_baby", label: "New baby", icon: Baby, description: "Child birth planning" },
-  { type: "job_loss", label: "Job loss", icon: Briefcase, description: "Unemployment or career change" },
-  { type: "home_purchase", label: "Home purchase", icon: Home, description: "Buying property" },
+// ─── Steps config ─────────────────────────────────────────────────────────────
+const STEPS = [
+  { id: 1, label: "Life Event",  desc: "What happened?" },
+  { id: 2, label: "Your Profile", desc: "Financial snapshot" },
+  { id: 3, label: "Details",     desc: "Final specifics" },
 ];
 
-export function LifeEventsPage() {
-  const [selectedEvent, setSelectedEvent] = useState<LifeEventType | null>(null);
-  const [form, setForm] = useState({
-    age: "",
-    monthly_income: "",
-    monthly_expenses: "",
-    emergency_fund: "",
-    event_amount: "",
+// ─── Validation ───────────────────────────────────────────────────────────────
+function validate(step: number, form: LifeEventFormState): string | null {
+  if (step === 1) {
+    if (!form.event_type) return "Please select a life event to continue.";
+  }
+  if (step === 2) {
+    const age = Number(form.age);
+    if (!form.age || age < 18 || age > 80) return "Please enter a valid age (18–80).";
+    if (!form.city || form.city.trim().length < 2) return "Please enter your city.";
+    if (!form.monthly_gross_income || Number(form.monthly_gross_income) <= 0)
+      return "Please enter your monthly income.";
+    if (!form.monthly_expenses || Number(form.monthly_expenses) <= 0)
+      return "Please enter your monthly expenses.";
+    if (Number(form.monthly_expenses) >= Number(form.monthly_gross_income))
+      return "Monthly expenses cannot exceed income.";
+  }
+  if (step === 3) {
+    const meta = EVENT_META[form.event_type!];
+    if (meta.needsAmount && (!form.event_amount || Number(form.event_amount) <= 0))
+      return "Please enter the amount received.";
+    if (meta.needsPropertyValue && (!form.property_value || Number(form.property_value) <= 0))
+      return "Please enter the property value.";
+  }
+  return null;
+}
+
+// ─── Stepper ──────────────────────────────────────────────────────────────────
+function StepperHeader({
+  current, form, onStepClick,
+}: {
+  current: number;
+  form: LifeEventFormState;
+  onStepClick: (n: number) => void;
+}) {
+  return (
+    <div className="flex items-center mb-8">
+      {STEPS.map((step, idx) => {
+        const isCompleted = current > step.id;
+        const isActive    = current === step.id;
+        return (
+          <div key={step.id} className="flex items-center flex-1 last:flex-none">
+            <button
+              type="button"
+              onClick={() => isCompleted && onStepClick(step.id)}
+              className={cn("flex flex-col items-center", isCompleted ? "cursor-pointer" : "cursor-default")}
+            >
+              <div className={cn(
+                "h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all",
+                isCompleted
+                  ? "bg-primary border-primary text-primary-foreground"
+                  : isActive
+                  ? "border-primary text-primary bg-background"
+                  : "border-border text-muted-foreground bg-background"
+              )}>
+                {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : step.id}
+              </div>
+              <div className="mt-1.5 text-center hidden sm:block">
+                <p className={cn(
+                  "text-xs font-medium",
+                  isActive ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </p>
+                {/* Show selected event on step 1 dot */}
+                {step.id === 1 && isCompleted && form.event_type && (
+                  <p className="text-[10px] text-primary">
+                    {EVENT_META[form.event_type].emoji} {EVENT_META[form.event_type].label}
+                  </p>
+                )}
+                {step.id !== 1 && (
+                  <p className="text-[10px] text-muted-foreground">{step.desc}</p>
+                )}
+              </div>
+            </button>
+            {idx < STEPS.length - 1 && (
+              <div className={cn(
+                "h-0.5 flex-1 mx-2 transition-all",
+                current > step.id ? "bg-primary" : "bg-border"
+              )} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Loading overlay ──────────────────────────────────────────────────────────
+const LOADING_STAGES = [
+  "Validating your financial profile...",
+  "Analysing your life event...",
+  "Computing allocations & gaps...",
+  "Generating personalised AI advice...",
+];
+
+function LoadingOverlay({ eventType }: { eventType: string | null }) {
+  const [stageIdx, setStageIdx] = useState(0);
+  const meta = eventType ? EVENT_META[eventType as keyof typeof EVENT_META] : null;
+
+  useState(() => {
+    const timers = LOADING_STAGES.map((_, i) =>
+      i > 0 ? setTimeout(() => setStageIdx(i), i * 1100) : null
+    ).filter(Boolean);
+    return () => timers.forEach((t) => t && clearTimeout(t));
   });
-  const [result, setResult] = useState<LifeEventResponse | null>(null);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-6">
+      <div className="relative">
+        <div className="h-16 w-16 rounded-full border-2 border-primary/20 animate-ping absolute" />
+        <div className="h-16 w-16 rounded-full border-2 border-primary/40 flex items-center justify-center relative">
+          {meta ? (
+            <span className="text-2xl">{meta.emoji}</span>
+          ) : (
+            <Loader2 className="h-7 w-7 text-primary animate-spin" />
+          )}
+        </div>
+      </div>
+      <div className="space-y-2 text-center">
+        {LOADING_STAGES.map((label, i) => (
+          <div key={i} className={cn("flex items-center gap-2 text-sm", i > stageIdx && "opacity-30")}>
+            {i < stageIdx
+              ? <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+              : i === stageIdx
+              ? <Loader2 className="h-4 w-4 text-primary animate-spin flex-shrink-0" />
+              : <div className="h-4 w-4 rounded-full border border-border flex-shrink-0" />
+            }
+            <span className={cn(i === stageIdx ? "text-foreground font-medium" : "text-muted-foreground")}>
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export function LifeEventsPage() {
+  const [step,    setStep   ] = useState(1);
+  const [form,    setForm   ] = useState<LifeEventFormState>(DEFAULT_LIFE_EVENT_FORM);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error,   setError  ] = useState("");
+  const [result,  setResult ] = useState<LifeEventApiResponse | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  function patch(p: Partial<LifeEventFormState>) {
+    setForm((f) => ({ ...f, ...p }));
+  }
 
-  const needsAmount = ["bonus", "inheritance", "home_purchase"].includes(selectedEvent || "");
+  // Auto-advance from step 1 when event is picked
+  function handleEventPick(p: Partial<LifeEventFormState>) {
+    patch(p);
+    if (p.event_type) {
+      setTimeout(() => { setStep(2); setError(""); }, 300);
+    }
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEvent) return;
-    setLoading(true);
+  function goNext() {
+    const err = validate(step, form);
+    if (err) { setError(err); return; }
     setError("");
-    setResult(null);
+    if (step < 3) { setStep((s) => s + 1); return; }
+    handleSubmit();
+  }
+
+  function goBack() {
+    setError("");
+    setStep((s) => Math.max(1, s - 1));
+  }
+
+  async function handleSubmit() {
+    setError("");
+    setLoading(true);
     try {
-      const payload = {
-        age: Number(form.age),
-        monthly_income: Number(form.monthly_income),
-        monthly_expenses: Number(form.monthly_expenses),
-        emergency_fund: Number(form.emergency_fund),
-        event_type: selectedEvent,
-        event_amount: needsAmount ? Number(form.event_amount) : 0,
-      };
-      const res = await getLifeEventPlan(payload);
-      setResult(res);
+      const payload = buildLifeEventPayload(form);
+      const res     = await getLifeEventPlan(payload as Record<string, unknown>);
+      setResult(res as unknown as LifeEventApiResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const reset = () => { setResult(null); setError(""); setSelectedEvent(null); };
-  const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+  function reset() {
+    setResult(null);
+    setForm(DEFAULT_LIFE_EVENT_FORM);
+    setStep(1);
+    setError("");
+  }
+
+  const meta = form.event_type ? EVENT_META[form.event_type] : null;
+
+  const stepTitles = [
+    "What's Happening?",
+    "Your Financial Snapshot",
+    meta?.needsAmount     ? "Event Amount"      :
+    meta?.needsPropertyValue ? "Property Details" :
+    "Ready to Generate",
+  ];
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Life events</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Get tailored financial guidance for life's big moments.
-          </p>
-        </div>
+      <div className="space-y-6 max-w-2xl mx-auto">
 
-        {!result && !loading && (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Event picker */}
-            <div className="bg-card border border-border rounded-xl p-5">
-              <p className="text-sm font-medium mb-3">Select your life event</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {EVENTS.map((ev) => {
-                  const Icon = ev.icon;
-                  return (
-                    <button
-                      type="button"
-                      key={ev.type}
-                      onClick={() => setSelectedEvent(ev.type)}
-                      className={cn(
-                        "flex flex-col items-start p-3 rounded-lg border text-left transition-colors",
-                        selectedEvent === ev.type
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-background hover:bg-accent"
-                      )}
-                    >
-                      <Icon className={cn("h-5 w-5 mb-2", selectedEvent === ev.type ? "text-primary" : "text-muted-foreground")} />
-                      <p className="text-sm font-medium">{ev.label}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{ev.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Profile fields */}
-            <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-              <p className="text-sm font-medium">Your profile</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="age">Age</Label>
-                  <Input id="age" name="age" type="number" placeholder="28" value={form.age} onChange={handleChange} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="monthly_income">Monthly income (₹)</Label>
-                  <Input id="monthly_income" name="monthly_income" type="number" placeholder="85000" value={form.monthly_income} onChange={handleChange} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="monthly_expenses">Monthly expenses (₹)</Label>
-                  <Input id="monthly_expenses" name="monthly_expenses" type="number" placeholder="50000" value={form.monthly_expenses} onChange={handleChange} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="emergency_fund">Emergency fund (₹)</Label>
-                  <Input id="emergency_fund" name="emergency_fund" type="number" placeholder="200000" value={form.emergency_fund} onChange={handleChange} required />
-                </div>
-                {needsAmount && (
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="event_amount">Event amount (₹)</Label>
-                    <Input id="event_amount" name="event_amount" type="number" placeholder="150000" value={form.event_amount} onChange={handleChange} required />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Button type="submit" className="w-full" size="lg" disabled={!selectedEvent}>
-              Get personalised plan
-            </Button>
-          </form>
-        )}
-
-        {loading && <LoadingState message="Building your life event plan..." />}
-        {error && <ErrorState message={error} onRetry={reset} />}
-
+        {/* ── Results ── */}
         {result && (
           <div className="space-y-6">
-            {/* Allocations */}
-            {result.result.allocations.length > 0 && (
-              <div>
-                <h2 className="text-base font-semibold mb-3">Recommended allocation</h2>
-                <div className="space-y-3">
-                  {result.result.allocations.map((a, i) => (
-                    <div key={i} className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{a.category}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{a.rationale}</p>
-                      </div>
-                      <p className="text-sm font-bold flex-shrink-0">{fmt(a.amount)}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Tax & priority actions */}
-            {(result.result.tax_impact > 0 || result.result.priority_actions.length > 0) && (
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl p-5">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2">
-                  {result.result.tax_impact > 0 && `Tax impact: ${fmt(result.result.tax_impact)} — `}
-                  Action items
-                </p>
-                <ul className="space-y-1.5">
-                  {result.result.priority_actions.map((a, i) => (
-                    <li key={i} className="text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Insurance gaps */}
-            {result.result.insurance_gaps.length > 0 && (
-              <div className="bg-card border border-border rounded-xl p-5">
-                <p className="text-sm font-semibold mb-2">Insurance gaps to address</p>
-                <ul className="space-y-1.5">
-                  {result.result.insurance_gaps.map((g, i) => (
-                    <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
-                      {g}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             <div>
-              <h2 className="text-base font-semibold mb-3">AI recommendations</h2>
+              <h1 className="text-2xl font-bold tracking-tight">Your Life Event Plan</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                {meta?.label} · Personalised financial action plan
+              </p>
+            </div>
+
+            {/* Block 1: Hero */}
+            <EventHero result={result.result} />
+
+            {/* Block 2: Allocation waterfall (windfall only) */}
+            <AllocationWaterfall result={result.result} />
+
+            {/* Block 3: Insurance gaps */}
+            <InsuranceGaps gaps={result.result.insurance_gaps} />
+
+            {/* Block 4: Priority timeline */}
+            <PriorityTimeline
+              actions={result.result.priority_actions}
+              eventType={result.result.event_type}
+            />
+
+            {/* Block 5: AI Advice */}
+            <div>
+              <h2 className="text-base font-semibold mb-3">AI Recommendations</h2>
               <AdvicePanel advice={result.advice} />
             </div>
 
-            <Button variant="outline" onClick={reset} className="w-full">Plan another event</Button>
+            {/* Cross-feature CTAs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between bg-muted rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Calculator className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium">Optimise your tax</p>
+                    <p className="text-[10px] text-muted-foreground">Bonus attracts additional tax</p>
+                  </div>
+                </div>
+                <a href="/tax-wizard">
+                  <Button variant="outline" size="sm" className="gap-1 text-xs flex-shrink-0">
+                    Tax Wizard
+                  </Button>
+                </a>
+              </div>
+              <div className="flex items-center justify-between bg-muted rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium">FIRE planning</p>
+                    <p className="text-[10px] text-muted-foreground">Plan your financial independence</p>
+                  </div>
+                </div>
+                <a href="/fire">
+                  <Button variant="outline" size="sm" className="gap-1 text-xs flex-shrink-0">
+                    FIRE Planner
+                  </Button>
+                </a>
+              </div>
+            </div>
+
+            <Button variant="outline" onClick={reset} className="w-full" size="lg">
+              Plan another life event
+            </Button>
           </div>
+        )}
+
+        {/* ── Loading ── */}
+        {loading && !result && (
+          <div className="bg-card border border-border rounded-xl px-8">
+            <LoadingOverlay eventType={form.event_type} />
+          </div>
+        )}
+
+        {/* ── Wizard ── */}
+        {!result && !loading && (
+          <>
+            {/* Page header */}
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Life Events</h1>
+              <p className="text-muted-foreground text-sm mt-1">
+                Get a tailored financial action plan for life&apos;s big moments.
+              </p>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-6">
+              <StepperHeader
+                current={step}
+                form={form}
+                onStepClick={(n) => { setStep(n); setError(""); }}
+              />
+
+              <div className="mb-5">
+                <h2 className="text-base font-semibold">
+                  Step {step}: {stepTitles[step - 1]}
+                </h2>
+              </div>
+
+              {/* Step content */}
+              {step === 1 && (
+                <StepEventPicker form={form} onChange={handleEventPick} />
+              )}
+              {step === 2 && (
+                <StepProfile form={form} onChange={patch} />
+              )}
+              {step === 3 && (
+                <StepEventDetails form={form} onChange={patch} />
+              )}
+
+              {/* Error */}
+              {error && (
+                <div className="mt-4 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-xl text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
+              {/* Nav */}
+              <div className={cn(
+                "flex items-center mt-6 pt-4 border-t border-border",
+                step === 1 ? "justify-end" : "justify-between"
+              )}>
+                {step > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={goBack}
+                    className="gap-1.5"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Back
+                  </Button>
+                )}
+
+                {/* Step 1: Next only shows if event selected */}
+                {step === 1 && (
+                  <Button
+                    type="button"
+                    onClick={goNext}
+                    disabled={!form.event_type}
+                    className="gap-1.5"
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+
+                {step === 2 && (
+                  <Button type="button" onClick={goNext} className="gap-1.5">
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+
+                {step === 3 && (
+                  <Button
+                    type="button"
+                    onClick={goNext}
+                    size="lg"
+                    className={cn(
+                      "gap-1.5",
+                      meta?.isCrisis && "bg-red-600 hover:bg-red-700 text-white border-red-600"
+                    )}
+                  >
+                    {meta?.isCrisis ? "⚡ Generate Crisis Plan" : `${meta?.emoji ?? ""} Generate My Plan`}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </AppShell>
