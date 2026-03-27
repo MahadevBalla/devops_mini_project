@@ -18,7 +18,7 @@ from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
 
-_MODEL_NAME = "all-MiniLM-L6-v2" # BAAI/bge-small-en-v1.5 (~33MB) | BAAI/bge-base-en-v1.5 (~100MB) | BAAI/bge-large-en-v1.5 (~335MB)
+_MODEL_NAME = "all-MiniLM-L6-v2"  # BAAI/bge-small-en-v1.5 (~33MB) | BAAI/bge-base-en-v1.5 (~100MB) | BAAI/bge-large-en-v1.5 (~335MB)
 _DOCS_DIR = Path(__file__).parent / "documents"
 _MIN_CHUNK_LEN = 80
 
@@ -62,7 +62,9 @@ def build_index() -> None:
         for md_file in files:
             doc_title = md_file.stem.replace("_", " ").title()
             content = md_file.read_text(encoding="utf-8")
-            raw_chunks = [c.strip() for c in content.split("\n\n") if len(c.strip()) >= _MIN_CHUNK_LEN]
+            raw_chunks = [
+                c.strip() for c in content.split("\n\n") if len(c.strip()) >= _MIN_CHUNK_LEN
+            ]
             for chunk in raw_chunks:
                 _chunks.append(f"[Source: {doc_title}]\n{chunk}")
 

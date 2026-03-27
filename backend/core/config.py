@@ -70,9 +70,9 @@ class Settings(BaseSettings):
     # Conservative: bad decade / 20yr+ horizon convergence
     # Base        : realistic 10yr SIP XIRR — most defensible default
     # Optimistic  : strong decade (post-2014 era)
-    BENCHMARK_NIFTY50_CONSERVATIVE: float = 9.5    # percent p.a.
-    BENCHMARK_NIFTY50_BASE: float = 11.5            # percent p.a.
-    BENCHMARK_NIFTY50_OPTIMISTIC: float = 13.0      # percent p.a.
+    BENCHMARK_NIFTY50_CONSERVATIVE: float = 9.5  # percent p.a.
+    BENCHMARK_NIFTY50_BASE: float = 11.5  # percent p.a.
+    BENCHMARK_NIFTY50_OPTIMISTIC: float = 13.0  # percent p.a.
 
     # Filter empty strings produced by trailing commas in ALLOWED_ORIGINS
     # Without the `if o.strip()` guard, CORSMiddleware receives an empty-string

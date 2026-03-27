@@ -31,7 +31,7 @@ _CACHE_TTL = timedelta(hours=24)
 
 # In-memory cache — module-level singletons
 _nav_by_isin: dict[str, float] = {}
-_nav_by_name: dict[str, float] = {}   # lowercase scheme name → NAV
+_nav_by_name: dict[str, float] = {}  # lowercase scheme name → NAV
 _cache_fetched_at: Optional[datetime] = None
 
 # Values AMFI uses to indicate a missing/inapplicable ISIN
@@ -69,7 +69,7 @@ def _is_stale(date_str: str, latest_date: date) -> bool:
     """Return True if the row's date is more than 2 days behind the latest."""
     row_date = _parse_date(date_str)
     if row_date is None:
-        return True   # unparseable date → treat as stale, skip
+        return True  # unparseable date → treat as stale, skip
     return (latest_date - row_date).days > 2
 
 
@@ -79,9 +79,9 @@ def _index_row(
     name_map: dict[str, float],
 ) -> None:
     """Index a single valid data row into isin_map and name_map."""
-    isin_primary   = parts[1].strip()
+    isin_primary = parts[1].strip()
     isin_secondary = parts[2].strip()
-    scheme_name    = parts[3].strip()
+    scheme_name = parts[3].strip()
 
     try:
         nav = float(parts[4].strip())
@@ -128,7 +128,9 @@ def _parse_nav_text(text: str) -> None:
     _nav_by_name = name_map
     logger.info(
         "AMFI NAV cache loaded: %d ISINs, %d scheme names (latest date: %s)",
-        len(isin_map), len(name_map), latest_date,
+        len(isin_map),
+        len(name_map),
+        latest_date,
     )
 
 

@@ -148,15 +148,17 @@ def build_yearly_projections(
             corpus = corpus * (1 + r) + sip
             cumulative_invested += sip
 
-        projections.append({
-            "year": _CURRENT_YEAR + i + 1,
-            "age": current_age + i + 1,
-            "sip": round(sip, 0),
-            "corpus": round(corpus, 0),
-            "invested": round(cumulative_invested, 0),
-        })
+        projections.append(
+            {
+                "year": _CURRENT_YEAR + i + 1,
+                "age": current_age + i + 1,
+                "sip": round(sip, 0),
+                "corpus": round(corpus, 0),
+                "invested": round(cumulative_invested, 0),
+            }
+        )
 
-        sip *= (1 + annual_stepup_rate)
+        sip *= 1 + annual_stepup_rate
 
     return projections
 

@@ -14,6 +14,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 class UserCreate(BaseModel):
     """User signup request."""
+
     full_name: str = Field(..., min_length=2, max_length=50, description="Full name (2-50 chars)")
     email: EmailStr = Field(..., description="Valid email address")
     password: str = Field(
@@ -31,8 +32,10 @@ class UserCreate(BaseModel):
     @classmethod
     def validate_name(cls, v: str) -> str:
         """Validate name contains only letters, spaces, and common punctuation."""
-        if not re.match(r'^[a-zA-Z\s\.\-\']+$', v):
-            raise ValueError("Name can only contain letters, spaces, dots, hyphens, and apostrophes")
+        if not re.match(r"^[a-zA-Z\s\.\-\']+$", v):
+            raise ValueError(
+                "Name can only contain letters, spaces, dots, hyphens, and apostrophes"
+            )
         return v.strip()
 
     @field_validator("password")
@@ -40,6 +43,7 @@ class UserCreate(BaseModel):
     def validate_password_strength(cls, v: str) -> str:
         """Validate password meets security requirements."""
         from core.security import validate_password_strength
+
         is_valid, error_msg = validate_password_strength(v)
         if not is_valid:
             raise ValueError(error_msg)
@@ -52,6 +56,7 @@ class UserCreate(BaseModel):
         if v is None:
             return None
         from core.security import normalize_phone, validate_indian_phone
+
         is_valid, error_msg = validate_indian_phone(v)
         if not is_valid:
             raise ValueError(error_msg)
@@ -60,12 +65,14 @@ class UserCreate(BaseModel):
 
 class UserLogin(BaseModel):
     """User login request."""
+
     email: EmailStr
     password: str
 
 
 class UserResponse(BaseModel):
     """Public user data (returned by API) — NO PASSWORD!"""
+
     id: str
     full_name: str
     email: EmailStr
@@ -80,6 +87,7 @@ class UserResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     """JWT token response after login/signup."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -88,16 +96,19 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     """Request to refresh access token."""
+
     refresh_token: str
 
 
 class PasswordResetRequest(BaseModel):
     """Request password reset email."""
+
     email: EmailStr
 
 
 class PasswordResetConfirm(BaseModel):
     """Confirm password reset with token."""
+
     token: str
     new_password: str = Field(
         ...,
@@ -110,6 +121,7 @@ class PasswordResetConfirm(BaseModel):
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
         from core.security import validate_password_strength
+
         is_valid, error_msg = validate_password_strength(v)
         if not is_valid:
             raise ValueError(error_msg)
@@ -118,10 +130,12 @@ class PasswordResetConfirm(BaseModel):
 
 class EmailVerificationRequest(BaseModel):
     """Request email verification resend."""
+
     email: EmailStr
 
 
 class EmailVerificationConfirm(BaseModel):
     """Confirm email with OTP/token."""
+
     email: EmailStr
     token: str = Field(..., min_length=6, max_length=6, description="6-digit OTP")

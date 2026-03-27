@@ -133,12 +133,20 @@ async def signup(user_data: UserCreate) -> dict:
         }
 
     except UserAlreadyExistsError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": e.message, "code": e.code})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail={"error": e.message, "code": e.code}
+        )
     except PydanticValidationError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"error": str(e), "code": "VALIDATION_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": str(e), "code": "VALIDATION_ERROR"},
+        )
     except Exception as e:
         logger.exception("Unexpected error during signup")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 # Email Verification
@@ -185,7 +193,10 @@ async def verify_email(verification_data: EmailVerificationConfirm) -> TokenResp
             raise InvalidTokenError("Invalid verification code")
 
         # Check OTP expiry
-        if not user.verification_token_expires_at or datetime.utcnow() > user.verification_token_expires_at:
+        if (
+            not user.verification_token_expires_at
+            or datetime.utcnow() > user.verification_token_expires_at
+        ):
             raise TokenExpiredError("Verification code has expired. Please request a new one.")
 
         # Mark as verified
@@ -215,10 +226,15 @@ async def verify_email(verification_data: EmailVerificationConfirm) -> TokenResp
         )
 
     except (InvalidTokenError, TokenExpiredError) as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"error": e.message, "code": e.code})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail={"error": e.message, "code": e.code}
+        )
     except Exception as e:
         logger.exception("Unexpected error during email verification")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 @router.post(
@@ -273,7 +289,10 @@ async def resend_verification(request: EmailVerificationRequest) -> dict:
 
     except Exception as e:
         logger.exception("Error resending verification code")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 # Login
@@ -355,10 +374,15 @@ async def login(credentials: UserLogin) -> TokenResponse:
         )
 
     except InvalidCredentialsError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": e.message, "code": e.code})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": e.message, "code": e.code}
+        )
     except Exception as e:
         logger.exception("Unexpected error during login")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 # Refresh Token
@@ -438,10 +462,15 @@ async def refresh_access_token(request: RefreshTokenRequest) -> TokenResponse:
         )
 
     except (InvalidTokenError, TokenExpiredError, AuthenticationError) as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": e.message, "code": e.code})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": e.message, "code": e.code}
+        )
     except Exception as e:
         logger.exception("Unexpected error during token refresh")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 # Logout
@@ -472,10 +501,15 @@ async def logout(request: RefreshTokenRequest) -> dict:
         }
 
     except InvalidTokenError as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": e.message, "code": e.code})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail={"error": e.message, "code": e.code}
+        )
     except Exception as e:
         logger.exception("Error during logout")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 @router.post(
@@ -504,7 +538,10 @@ async def logout_all(user: User = Depends(get_current_user)) -> dict:
 
     except Exception as e:
         logger.exception("Error during logout-all")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"error": str(e), "code": "INTERNAL_ERROR"})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_ERROR"},
+        )
 
 
 # Get Current User

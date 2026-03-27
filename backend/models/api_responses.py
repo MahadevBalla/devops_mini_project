@@ -35,6 +35,7 @@ class FeatureRequest(BaseModel):
     use_profile=False → pure what-if; Portfolio never touched.
     save_scenario=True → persist this run as a named Scenario (only when use_profile=False).
     """
+
     session_id: str
     use_profile: bool = True
     profile: Optional[dict] = None

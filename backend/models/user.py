@@ -37,8 +37,13 @@ class AssetAllocation(BaseModel):
     @property
     def total(self) -> float:
         return (
-            self.equity + self.debt + self.gold
-            + self.real_estate + self.cash + self.ppf_epf + self.other
+            self.equity
+            + self.debt
+            + self.gold
+            + self.real_estate
+            + self.cash
+            + self.ppf_epf
+            + self.other
         )
 
 
@@ -52,11 +57,15 @@ class InsuranceCoverage(BaseModel):
 
 class TaxDeductions(BaseModel):
     section_80c: float = Field(
-        0.0, ge=0, le=150_000,
+        0.0,
+        ge=0,
+        le=150_000,
         description="Max ₹1.5L under Section 80C",
     )
     section_80d_self: float = Field(
-        0.0, ge=0, le=50_000,
+        0.0,
+        ge=0,
+        le=50_000,
         description="₹25k for taxpayer <60 yrs; ₹50k for senior citizen",
     )
     section_80d_self_is_senior: bool = Field(
@@ -64,7 +73,9 @@ class TaxDeductions(BaseModel):
         description="Set True if taxpayer is ≥60 years old — raises 80D self limit to ₹50k",
     )
     section_80d_parents: float = Field(
-        0.0, ge=0, le=50_000,
+        0.0,
+        ge=0,
+        le=50_000,
         description="₹25k for parents <60 yrs; ₹50k if parents are senior citizens",
     )
     section_80d_parents_are_senior: bool = Field(
@@ -72,12 +83,16 @@ class TaxDeductions(BaseModel):
         description="Set True if parents are ≥60 years old — raises 80D parents limit to ₹50k",
     )
     nps_80ccd_1b: float = Field(
-        0.0, ge=0, le=50_000,
+        0.0,
+        ge=0,
+        le=50_000,
         description="Additional NPS deduction over 80C limit, max ₹50k",
     )
     hra_claimed: float = Field(0.0, ge=0)
     home_loan_interest: float = Field(
-        0.0, ge=0, le=200_000,
+        0.0,
+        ge=0,
+        le=200_000,
         description="Section 24(b) home loan interest, max ₹2L for self-occupied",
     )
     other_deductions: float = Field(0.0, ge=0)

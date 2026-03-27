@@ -63,7 +63,7 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": f"Invalid or expired token: {str(e)}", "code": "INVALID_TOKEN"},
             headers={"WWW-Authenticate": "Bearer"},
-    )
+        )
 
 
 async def require_verified_user(

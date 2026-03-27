@@ -83,15 +83,19 @@ async def tax_wizard(raw_data: dict) -> TaxWizardResponse:
             )
         )
 
-        await update_session_state(session_id, "tax", {
-            "gross_income": result.gross_income,
-            "old_regime_tax": result.old_regime_tax,
-            "new_regime_tax": result.new_regime_tax,
-            "recommended_regime": result.recommended_regime.value,
-            "savings_by_switching": result.savings_by_switching,
-            "effective_rate_old": result.effective_rate_old,
-            "effective_rate_new": result.effective_rate_new,
-        })
+        await update_session_state(
+            session_id,
+            "tax",
+            {
+                "gross_income": result.gross_income,
+                "old_regime_tax": result.old_regime_tax,
+                "new_regime_tax": result.new_regime_tax,
+                "recommended_regime": result.recommended_regime.value,
+                "savings_by_switching": result.savings_by_switching,
+                "effective_rate_old": result.effective_rate_old,
+                "effective_rate_new": result.effective_rate_new,
+            },
+        )
 
         return TaxWizardResponse(
             session_id=session_id,

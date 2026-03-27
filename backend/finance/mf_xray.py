@@ -120,10 +120,19 @@ def _infer_category(scheme_name: str) -> str:
         return "Small Cap"
     if any(k in name for k in ["mid cap", "midcap"]):
         return "Mid Cap"
-    if any(k in name for k in [
-        "large cap", "largecap", "bluechip", "top 100", "top100",
-        "frontline", "focused 30", "top 200",
-    ]):
+    if any(
+        k in name
+        for k in [
+            "large cap",
+            "largecap",
+            "bluechip",
+            "top 100",
+            "top100",
+            "frontline",
+            "focused 30",
+            "top 200",
+        ]
+    ):
         return "Large Cap"
     if "flexi" in name or "multi cap" in name:
         return "Flexi/Multi Cap"
@@ -283,16 +292,16 @@ def detect_overlap(holdings: list[MFHolding]) -> list[OverlapPair]:
     _LARGE_CAP_STOCKS = ["HDFC Bank", "Reliance", "ICICI Bank", "Infosys", "TCS"]
 
     _OVERLAP_MATRIX: dict[tuple[str, str], float] = {
-        ("Large Cap",       "Large Cap"):       65.0,
-        ("Index/ETF",       "Index/ETF"):       80.0,
+        ("Large Cap", "Large Cap"): 65.0,
+        ("Index/ETF", "Index/ETF"): 80.0,
         ("Flexi/Multi Cap", "Flexi/Multi Cap"): 45.0,
         # Cross-category
-        ("Index/ETF",       "Large Cap"):       65.0,
-        ("Large Cap",       "Index/ETF"):       65.0,
-        ("Index/ETF",       "Flexi/Multi Cap"): 45.0,
-        ("Flexi/Multi Cap", "Index/ETF"):       45.0,
-        ("Large Cap",       "Flexi/Multi Cap"): 40.0,
-        ("Flexi/Multi Cap", "Large Cap"):       40.0,
+        ("Index/ETF", "Large Cap"): 65.0,
+        ("Large Cap", "Index/ETF"): 65.0,
+        ("Index/ETF", "Flexi/Multi Cap"): 45.0,
+        ("Flexi/Multi Cap", "Index/ETF"): 45.0,
+        ("Large Cap", "Flexi/Multi Cap"): 40.0,
+        ("Flexi/Multi Cap", "Large Cap"): 40.0,
     }
 
     for i in range(len(equity_funds)):
@@ -347,8 +356,11 @@ def generate_rebalancing_suggestions(
 
     # Only suggest switching to direct if not already on direct plans
     regular_plan_funds = [
-        h for h in holdings
-        if "direct" not in h.scheme_name.lower() and h.expense_ratio is not None and h.expense_ratio > 0.5
+        h
+        for h in holdings
+        if "direct" not in h.scheme_name.lower()
+        and h.expense_ratio is not None
+        and h.expense_ratio > 0.5
     ]
     if regular_plan_funds and not high_expense:
         suggestions.append(
@@ -399,7 +411,8 @@ def analyse_portfolio(
         benchmark_optimistic=settings.BENCHMARK_NIFTY50_OPTIMISTIC,
         xirr_vs_benchmark=(
             round(overall_xirr_pct - settings.BENCHMARK_NIFTY50_BASE, 2)
-            if overall_xirr_pct is not None else None
+            if overall_xirr_pct is not None
+            else None
         ),
         absolute_return_pct=round(abs_return, 2),
         holdings=holdings,

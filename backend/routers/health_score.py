@@ -80,13 +80,17 @@ async def health_score(raw_data: dict) -> HealthScoreResponse:
             )
         )
 
-        await update_session_state(session_id, "health_score", {
-            "overall_score": result.overall_score,
-            "grade": result.grade,
-            "monthly_surplus": result.monthly_surplus,
-            "total_net_worth": result.total_net_worth,
-            "monthly_income": profile.monthly_gross_income,
-        })
+        await update_session_state(
+            session_id,
+            "health_score",
+            {
+                "overall_score": result.overall_score,
+                "grade": result.grade,
+                "monthly_surplus": result.monthly_surplus,
+                "total_net_worth": result.total_net_worth,
+                "monthly_income": profile.monthly_gross_income,
+            },
+        )
 
         return HealthScoreResponse(
             session_id=session_id,

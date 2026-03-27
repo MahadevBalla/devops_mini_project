@@ -22,21 +22,21 @@ def hash_password(password: str) -> str:
     before hashing to avoid errors.
     """
     # Truncate to 72 bytes for bcrypt limit
-    password_bytes = password.encode('utf-8')[:72]
+    password_bytes = password.encode("utf-8")[:72]
 
     # Generate salt and hash
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
 
     # Return as string
-    return hashed.decode('utf-8')
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a hashed password."""
     # Truncate to 72 bytes (same as hash)
-    password_bytes = plain_password.encode('utf-8')[:72]
-    hashed_bytes = hashed_password.encode('utf-8')
+    password_bytes = plain_password.encode("utf-8")[:72]
+    hashed_bytes = hashed_password.encode("utf-8")
 
     return bcrypt.checkpw(password_bytes, hashed_bytes)
 

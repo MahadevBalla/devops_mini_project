@@ -188,7 +188,7 @@ class TestTaxEdgeCases:
         """
         t_at_50l = tax.compute_new_regime_tax(50_00_000)
         t_at_50l_plus1 = tax.compute_new_regime_tax(50_00_001)
-        assert (t_at_50l_plus1 - t_at_50l) <= 2.0 # allow small floating point margin
+        assert (t_at_50l_plus1 - t_at_50l) <= 2.0  # allow small floating point margin
 
     def test_cess_rate_is_4_pct(self):
         """Final tax must equal (base_tax + surcharge) × 1.04 exactly."""

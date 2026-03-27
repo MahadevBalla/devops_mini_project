@@ -98,39 +98,63 @@ from models.user import (
 
 __all__ = [
     # common
-    "AgentAdvice", "EmploymentType", "GoalType", "LifeEventType", "RiskProfile", "TaxRegime",
-
+    "AgentAdvice",
+    "EmploymentType",
+    "GoalType",
+    "LifeEventType",
+    "RiskProfile",
+    "TaxRegime",
     # user
-    "AssetAllocation", "DebtItem", "Goal", "InsuranceCoverage", "TaxDeductions", "UserProfile",
-
+    "AssetAllocation",
+    "DebtItem",
+    "Goal",
+    "InsuranceCoverage",
+    "TaxDeductions",
+    "UserProfile",
     # fire
-    "FIREPlan", "SIPGoal", "YearlyProjection",
-
+    "FIREPlan",
+    "SIPGoal",
+    "YearlyProjection",
     # health
-    "DimensionScore", "MoneyHealthResult",
-
+    "DimensionScore",
+    "MoneyHealthResult",
     # tax
     "TaxRegimeComparison",
-
     # life_event
-    "LifeEventAllocation", "LifeEventInput", "LifeEventResult",
-
+    "LifeEventAllocation",
+    "LifeEventInput",
+    "LifeEventResult",
     # couple
-    "CoupleOptimisation", "CoupleProfile",
-
+    "CoupleOptimisation",
+    "CoupleProfile",
     # mf_xray
-    "MFHolding", "MFXRayResult", "OverlapPair",
-
+    "MFHolding",
+    "MFXRayResult",
+    "OverlapPair",
     # chat
-    "ChatMessage", "ChatRequest", "ChatResponse",
-
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
     # auth
-    "EmailVerificationConfirm", "EmailVerificationRequest", "PasswordResetConfirm",
-    "PasswordResetRequest", "RefreshTokenRequest", "TokenResponse",
-    "UserCreate", "UserLogin", "UserResponse",
-
+    "EmailVerificationConfirm",
+    "EmailVerificationRequest",
+    "PasswordResetConfirm",
+    "PasswordResetRequest",
+    "RefreshTokenRequest",
+    "TokenResponse",
+    "UserCreate",
+    "UserLogin",
+    "UserResponse",
     # api_responses
-    "CoupleResponse", "ErrorResponse", "FeatureRequest", "FIREPlanResponse",
-    "HealthScoreResponse", "LifeEventResponse", "MFXRayResponse", "PortfolioResponse",
-    "ScenarioSummary", "SessionCreateResponse", "TaxWizardResponse",
+    "CoupleResponse",
+    "ErrorResponse",
+    "FeatureRequest",
+    "FIREPlanResponse",
+    "HealthScoreResponse",
+    "LifeEventResponse",
+    "MFXRayResponse",
+    "PortfolioResponse",
+    "ScenarioSummary",
+    "SessionCreateResponse",
+    "TaxWizardResponse",
 ]

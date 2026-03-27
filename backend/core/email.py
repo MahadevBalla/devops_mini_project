@@ -31,7 +31,7 @@ def send_otp_email(to_email: str, otp: str, full_name: str = "") -> bool:
 
         # Plain text version
         text_body = f"""
-Hello{' ' + full_name if full_name else ''},
+Hello{" " + full_name if full_name else ""},
 
 Your verification code is: {otp}
 
@@ -63,7 +63,7 @@ Best regards,
             <h1>{settings.APP_NAME}</h1>
         </div>
         <div class="content">
-            <p>Hello{' ' + full_name if full_name else ''},</p>
+            <p>Hello{" " + full_name if full_name else ""},</p>
             <p>Your verification code is:</p>
             <div class="otp-code">{otp}</div>
             <p style="text-align: center; color: #666;">This code will expire in 10 minutes.</p>

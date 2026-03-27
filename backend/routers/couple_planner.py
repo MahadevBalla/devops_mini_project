@@ -100,15 +100,19 @@ async def couple_planner(raw_data: dict) -> CoupleResponse:
             )
         )
 
-        await update_session_state(session_id, "couple", {
-            "combined_net_worth": result.combined_net_worth,
-            "combined_monthly_surplus": result.combined_monthly_surplus,
-            "better_hra_claimant": result.better_hra_claimant,
-            "hra_savings": result.hra_savings,
-            "joint_tax_saving": result.joint_tax_saving,
-            "partner_a_sip": result.partner_a_sip,
-            "partner_b_sip": result.partner_b_sip,
-        })
+        await update_session_state(
+            session_id,
+            "couple",
+            {
+                "combined_net_worth": result.combined_net_worth,
+                "combined_monthly_surplus": result.combined_monthly_surplus,
+                "better_hra_claimant": result.better_hra_claimant,
+                "hra_savings": result.hra_savings,
+                "joint_tax_saving": result.joint_tax_saving,
+                "partner_a_sip": result.partner_a_sip,
+                "partner_b_sip": result.partner_b_sip,
+            },
+        )
 
         return CoupleResponse(
             session_id=session_id,

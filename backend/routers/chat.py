@@ -90,10 +90,12 @@ def _parse_logs_to_history(logs: list) -> list[dict]:
             pass
     return history
 
+
 def _fmt(x) -> str:
     if isinstance(x, (int, float)):
         return f"₹{x:,}"
     return str(x) if x is not None else "N/A"
+
 
 def _parse_state_to_context(session: Session | None) -> str:
     if not session or not session.state_json or session.state_json == "{}":
@@ -112,7 +114,9 @@ def _parse_state_to_context(session: Session | None) -> str:
         lines.append(f"- Current corpus:        {_fmt(fire.get('current_corpus'))}")
         lines.append(f"- Corpus gap:            {_fmt(fire.get('corpus_gap'))}")
         lines.append(f"- Required monthly SIP:  {_fmt(fire.get('required_monthly_sip'))}")
-        lines.append(f"- Step-up SIP option:    {_fmt(fire.get('required_stepup_sip'))}/mo (+10%/yr)")
+        lines.append(
+            f"- Step-up SIP option:    {_fmt(fire.get('required_stepup_sip'))}/mo (+10%/yr)"
+        )
         lines.append(f"- Projected FI age:      {fire.get('projected_fi_age', 'N/A')}")
         lines.append(f"- Years to FI:           {fire.get('years_to_fi', 'N/A')}")
         if fire.get("on_track"):
@@ -127,30 +131,38 @@ def _parse_state_to_context(session: Session | None) -> str:
         lines.append(f"- Monthly surplus: {_fmt(health.get('monthly_surplus'))}")
         lines.append(f"- Net worth: {_fmt(health.get('total_net_worth'))}")
         for d in health.get("dimensions", []):
-            lines.append(f"  • {d.get('name')}: {d.get('score')} ({d.get('label')}) — {d.get('insight')}")
+            lines.append(
+                f"  • {d.get('name')}: {d.get('score')} ({d.get('label')}) — {d.get('insight')}"
+            )
 
     if health and fire:
         delta = health.get("monthly_surplus", 0) - fire.get("required_monthly_sip", 0)
         lines.append(f"- Surplus vs SIP delta:  {_fmt(delta)}")
 
-
     tax = state.get("tax")
     if tax:
         lines.append("----- Tax Wizard -----")
-        lines.append(f"- Old regime: ₹{tax.get('old_regime_tax', 0):,} | New: ₹{tax.get('new_regime_tax', 0):,}")
-        lines.append(f"- Recommended: {tax.get('recommended_regime')} | Saving: ₹{tax.get('savings_by_switching', 0):,}")
+        lines.append(
+            f"- Old regime: ₹{tax.get('old_regime_tax', 0):,} | New: ₹{tax.get('new_regime_tax', 0):,}"
+        )
+        lines.append(
+            f"- Recommended: {tax.get('recommended_regime')} | Saving: ₹{tax.get('savings_by_switching', 0):,}"
+        )
 
     profile = state.get("profile")
     if profile:
         lines.append("----- User Profile -----")
-        surplus = profile.get('monthly_gross_income', 0) - profile.get('monthly_expenses', 0)
+        surplus = profile.get("monthly_gross_income", 0) - profile.get("monthly_expenses", 0)
         lines.append(f"- Age: {profile.get('age')} | Surplus: ₹{surplus:,}/mo")
-        lines.append(f"- Risk: {profile.get('risk_profile')} | Retirement age: {profile.get('retirement_age')}")
+        lines.append(
+            f"- Risk: {profile.get('risk_profile')} | Retirement age: {profile.get('retirement_age')}"
+        )
 
     if not lines:
         return f"\n\n[User's financial context: {json.dumps(state)[:600]}]"
 
     return "\n\n" + "\n".join(lines)
+
 
 @router.post("/chat")
 async def chat(req: ChatRequest) -> ChatResponse:

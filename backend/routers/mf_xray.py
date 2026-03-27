@@ -184,16 +184,20 @@ async def mf_xray(
             )
         )
 
-        await update_session_state(session_id, "mf_xray", {
-            "total_invested": result.total_invested,
-            "total_current_value": result.total_current_value,
-            "absolute_return_pct": result.absolute_return_pct,
-            "overall_xirr": result.overall_xirr,
-            "benchmark_base": result.benchmark_base,
-            "xirr_vs_benchmark": result.xirr_vs_benchmark,
-            "num_funds": len(result.holdings),
-            "high_expense_funds": result.high_expense_funds,
-        })
+        await update_session_state(
+            session_id,
+            "mf_xray",
+            {
+                "total_invested": result.total_invested,
+                "total_current_value": result.total_current_value,
+                "absolute_return_pct": result.absolute_return_pct,
+                "overall_xirr": result.overall_xirr,
+                "benchmark_base": result.benchmark_base,
+                "xirr_vs_benchmark": result.xirr_vs_benchmark,
+                "num_funds": len(result.holdings),
+                "high_expense_funds": result.high_expense_funds,
+            },
+        )
 
         return MFXRayResponse(
             session_id=session_id,

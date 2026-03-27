@@ -90,12 +90,18 @@ async def life_event(raw_data: dict) -> LifeEventResponse:
             )
         )
 
-        await update_session_state(session_id, "life_event", {
-            "event_type": result.event_type.value,
-            "event_amount": result.event_amount,
-            "tax_impact": result.tax_impact,
-            "allocations": [{"category": a.category, "amount": a.amount} for a in result.allocations],
-        })
+        await update_session_state(
+            session_id,
+            "life_event",
+            {
+                "event_type": result.event_type.value,
+                "event_amount": result.event_amount,
+                "tax_impact": result.tax_impact,
+                "allocations": [
+                    {"category": a.category, "amount": a.amount} for a in result.allocations
+                ],
+            },
+        )
 
         return LifeEventResponse(
             session_id=session_id,
