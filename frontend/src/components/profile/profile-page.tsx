@@ -12,11 +12,13 @@ import {
   Edit,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  Palette
 } from "lucide-react";
 import { authService, type UserResponse } from "@/lib/auth";
 import { ApiException } from "@/lib/api";
 import { AppShell } from "@/components/layout";
+import { ToggleTheme } from "@/components/ui/toggle-theme";
 
 export function ProfilePage() {
   const router = useRouter();
@@ -149,128 +151,145 @@ export function ProfilePage() {
         </div>
       </div>
 
-        {/* Profile Information Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Profile Information Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 
-          {/* Contact Information */}
-          <div className="bg-card rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Contact Information
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <Mail className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email Address</p>
-                  <p className="font-medium">{user.email}</p>
-                </div>
+        {/* Contact Information */}
+        <div className="bg-card rounded-xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+            <User className="h-5 w-5 text-primary" />
+            Contact Information
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-muted-foreground">Email Address</p>
+                <p className="font-medium">{user.email}</p>
               </div>
-
-              {user.phone ? (
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone Number</p>
-                    <p className="font-medium">{user.phone}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg opacity-50">
-                  <Phone className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone Number</p>
-                    <p className="text-muted-foreground">Not provided</p>
-                  </div>
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* Account Details */}
-          <div className="bg-card rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Account Details
-            </h2>
-            <div className="space-y-4">
+            {user.phone ? (
               <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <Phone className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">User ID</p>
-                  <p className="font-medium font-mono text-xs">{user.id}</p>
+                  <p className="text-sm text-muted-foreground">Phone Number</p>
+                  <p className="font-medium">{user.phone}</p>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            ) : (
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg opacity-50">
+                <Phone className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Account Created</p>
-                  <p className="font-medium">{formatDate(user.created_at)}</p>
+                  <p className="text-sm text-muted-foreground">Phone Number</p>
+                  <p className="text-muted-foreground">Not provided</p>
                 </div>
               </div>
-
-              {user.last_login_at && (
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Last Login</p>
-                    <p className="font-medium">{formatDate(user.last_login_at)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <button className="bg-card rounded-xl shadow-sm p-6 text-left hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="size-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Settings className="h-5 w-5 text-blue-600" />
+        {/* Account Details */}
+        <div className="bg-card rounded-xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            Account Details
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <div>
+                <p className="text-sm text-muted-foreground">User ID</p>
+                <p className="font-medium font-mono text-xs">{user.id}</p>
               </div>
-              <h3 className="font-semibold">Account Settings</h3>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Update your password, privacy settings, and notifications
-            </p>
-          </button>
 
-          <button className="bg-card rounded-xl shadow-sm p-6 text-left hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="size-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Shield className="h-5 w-5 text-green-600" />
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div>
+                <p className="text-sm text-muted-foreground">Account Created</p>
+                <p className="font-medium">{formatDate(user.created_at)}</p>
               </div>
-              <h3 className="font-semibold">Security</h3>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Two-factor authentication and security preferences
-            </p>
-          </button>
 
-          <button className="bg-card rounded-xl shadow-sm p-6 text-left hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="size-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <User className="h-5 w-5 text-purple-600" />
+            {user.last_login_at && (
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Last Login</p>
+                  <p className="font-medium">{formatDate(user.last_login_at)}</p>
+                </div>
               </div>
-              <h3 className="font-semibold">Personal Info</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Edit your personal information and profile details
-            </p>
-          </button>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-800">
-              <XCircle className="h-4 w-4" />
-              <p className="text-sm">{error}</p>
-            </div>
+            )}
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* ── Appearance Section — NEW ── */}
+      <div className="bg-card rounded-xl shadow-sm p-6 mb-6">
+        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Palette className="h-5 w-5 text-primary" />
+          Appearance
+        </h2>
+        <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-lg">
+          <div>
+            <p className="text-sm font-medium text-foreground">Theme</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Choose between light, dark, or follow your system setting
+            </p>
+          </div>
+          <ToggleTheme />
+        </div>
+      </div>
+
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <button className="bg-card rounded-xl shadow-sm p-6 text-left hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="size-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Settings className="h-5 w-5 text-blue-600" />
+            </div>
+            <h3 className="font-semibold">Account Settings</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Update your password, privacy settings, and notifications
+          </p>
+        </button>
+
+        <button className="bg-card rounded-xl shadow-sm p-6 text-left hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="size-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <Shield className="h-5 w-5 text-green-600" />
+            </div>
+            <h3 className="font-semibold">Security</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Two-factor authentication and security preferences
+          </p>
+        </button>
+
+        <button className="bg-card rounded-xl shadow-sm p-6 text-left hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="size-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <User className="h-5 w-5 text-purple-600" />
+            </div>
+            <h3 className="font-semibold">Personal Info</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Edit your personal information and profile details
+          </p>
+        </button>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2 text-red-800">
+            <XCircle className="h-4 w-4" />
+            <p className="text-sm">{error}</p>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }

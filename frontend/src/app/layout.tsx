@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
-import { ThemeProvider } from '@mui/material/styles'; 
+import { ThemeProvider as MUIThemeProvider } from '@mui/material/styles';
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { Inter } from "next/font/google";
 import { Bricolage_Grotesque } from "next/font/google";
 import theme from "@/theme";
@@ -59,11 +60,18 @@ export default function RootLayout({
   return (
     <html lang="en" className={bricolage.variable} suppressHydrationWarning>
       <body className={bricolage.className}>
-        <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <ThemeProvider theme={theme}>
-            {children}
-          </ThemeProvider>
-        </AppRouterCacheProvider>
+         <NextThemesProvider
+          attribute="class"          // adds/removes "dark" class on <html>
+          defaultTheme="system"      // respects OS preference by default
+          enableSystem               // enables system option
+          disableTransitionOnChange  // prevents flash on theme switch
+        >
+          <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+            <MUIThemeProvider theme={theme}>
+              {children}
+            </MUIThemeProvider>
+          </AppRouterCacheProvider>
+        </NextThemesProvider>
       </body>
     </html>
   );
