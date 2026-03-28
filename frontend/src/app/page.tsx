@@ -628,19 +628,19 @@ export default function Home() {
 
             {/* Headline */}
             <motion.h1
-              className="text-4xl sm:text-5xl lg:text-[3.4rem] font-bold tracking-tight"
+              className="text-4xl sm:text-5xl lg:text-[3.4rem] font-bold tracking-tight space-y-4.5"
               style={{ lineHeight: 1.08, letterSpacing: "-0.03em" }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
-              Save{" "}
-              <Highlight className="text-foreground whitespace-nowrap">
+              <div>Save{" "}</div>
+              <div><Highlight className="text-foreground whitespace-nowrap">
                 ₹47,200 in taxes.
               </Highlight>
-              <br />
-              Retire by{" "}
-              <span className="text-gradient">48.</span>
+                <br /></div>
+              <div>Retire by{" "}
+                <span className="text-gradient">48.</span></div>
             </motion.h1>
 
             <motion.p
