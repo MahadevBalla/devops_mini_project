@@ -1,27 +1,113 @@
-// frontend/src/components/ui/analysis-loader.tsx
 "use client";
-
 import { useState, useEffect } from "react";
-import { CheckCircle2, Loader2 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface AnalysisLoaderProps {
     stages: string[];
     stageDelays?: number[];
-    icon?: LucideIcon;
-    iconStatic?: boolean;
     title?: string;
     subtitle?: string;
     footerNote?: string;
     paddingY?: string;
 }
 
+// ─── Character-shimmer for the active stage label ─────────────────────────────
+function ShimmerText({ text }: { text: string }) {
+    return (
+        <span aria-label={text}>
+            {text.split("").map((char, i) => (
+                <motion.span
+                    key={`${char}-${i}`}
+                    className="inline-block"
+                    initial={{ opacity: 0.4 }}
+                    animate={{
+                        opacity: [0.4, 1, 0.4],
+                        y: [0, -1.5, 0],
+                    }}
+                    transition={{
+                        duration: 1.6,
+                        repeat: Infinity,
+                        repeatType: "loop",
+                        delay: i * 0.04,
+                        ease: "easeInOut",
+                        repeatDelay: 0.6,
+                    }}
+                >
+                    {char === " " ? "\u00A0" : char}
+                </motion.span>
+            ))}
+        </span>
+    );
+}
+
+// ─── Pulsing arc ring ─────────────────────────────────────────────────────────
+function PulsingRing() {
+    return (
+        <div className="relative flex items-center justify-center w-20 h-20">
+            {/* Outer slow-rotate arc */}
+            <motion.svg
+                className="absolute inset-0 w-full h-full"
+                viewBox="0 0 80 80"
+                fill="none"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            >
+                <circle
+                    cx="40"
+                    cy="40"
+                    r="36"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeDasharray="48 178"
+                    strokeLinecap="round"
+                    className="text-primary/50"
+                />
+            </motion.svg>
+
+            {/* Counter-rotate secondary arc */}
+            <motion.svg
+                className="absolute inset-0 w-full h-full"
+                viewBox="0 0 80 80"
+                fill="none"
+                animate={{ rotate: -360 }}
+                transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
+            >
+                <circle
+                    cx="40"
+                    cy="40"
+                    r="28"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    strokeDasharray="24 152"
+                    strokeLinecap="round"
+                    className="text-primary/25"
+                />
+            </motion.svg>
+
+            {/* Center dot — glow pulse */}
+            <motion.div
+                className="w-5 h-5 rounded-full"
+                style={{ background: "var(--gradient-primary)" }}
+                animate={{
+                    scale: [1, 1.3, 1],
+                    boxShadow: [
+                        "var(--shadow-glow-sm)",
+                        "var(--shadow-glow)",
+                        "var(--shadow-glow-sm)",
+                    ],
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
+        </div>
+    );
+}
+
+// ─── Main Loader ──────────────────────────────────────────────────────────────
 export function AnalysisLoader({
     stages,
     stageDelays,
-    icon: Icon = Loader2,
-    iconStatic = false,
     title,
     subtitle,
     footerNote,
@@ -34,7 +120,7 @@ export function AnalysisLoader({
         let elapsed = 0;
         stages.forEach((_, i) => {
             if (i === 0) return;
-            const d = stageDelays?.[i - 1] ?? 1200;
+            const d = stageDelays?.[i - 1] ?? 1400;
             elapsed += d;
             timers.push(setTimeout(() => setStageIdx(i), elapsed));
         });
@@ -42,104 +128,123 @@ export function AnalysisLoader({
     }, [stages, stageDelays]);
 
     return (
-        <div className={cn("flex flex-col items-center justify-center gap-6", paddingY)}>
+        <div
+            className={cn(
+                "flex flex-col items-center justify-center gap-8",
+                paddingY
+            )}
+        >
+            {/* ── Animated ring ── */}
+            <PulsingRing />
 
-            {/* ── Center icon: slow-spinning outer ring + icon ── */}
-            <div className="relative flex items-center justify-center">
-                {/* Slow rotating arc — feels "computing", not "pinging" */}
-                <svg
-                    className="absolute h-20 w-20 animate-[spin_3s_linear_infinite]"
-                    viewBox="0 0 80 80"
-                    fill="none"
-                >
-                    <circle
-                        cx="40" cy="40" r="36"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeDasharray="60 166"
-                        strokeLinecap="round"
-                        className="text-primary/40"
-                    />
-                </svg>
-                {/* Static outer ring */}
-                <div className="h-16 w-16 rounded-full border border-border/50 flex items-center justify-center bg-card">
-                    <Icon
-                        className={cn(
-                            "h-7 w-7 text-primary",
-                            !iconStatic && "animate-spin"
-                        )}
-                    />
-                </div>
+            {/* ── Active stage with shimmer text ── */}
+            <div className="text-center space-y-1.5 min-h-12">
+                {title && (
+                    <p className="text-sm font-semibold text-foreground">{title}</p>
+                )}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={stageIdx}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        className="text-sm font-semibold text-foreground"
+                        style={{ fontFamily: "var(--font-sans)" }}
+                    >
+                        <ShimmerText text={stages[stageIdx]} />
+                    </motion.div>
+                </AnimatePresence>
+                {subtitle && (
+                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                )}
             </div>
 
-            {/* ── Optional title block ── */}
-            {(title || subtitle) && (
-                <div className="text-center space-y-0.5">
-                    {title && (
-                        <p className="text-sm font-semibold text-foreground">{title}</p>
-                    )}
-                    {subtitle && (
-                        <p className="text-xs text-muted-foreground truncate max-w-[240px]">
-                            {subtitle}
-                        </p>
-                    )}
-                </div>
-            )}
-
             {/* ── Stage tracker ── */}
-            <div className="space-y-3 w-full max-w-xs">
+            <div className="space-y-2 w-full max-w-xs">
                 {stages.map((label, i) => {
                     const isDone = i < stageIdx;
                     const isActive = i === stageIdx;
                     const isPending = i > stageIdx;
+
                     return (
-                        <div
+                        <motion.div
                             key={i}
-                            className={cn(
-                                "flex items-center gap-3 text-sm transition-all duration-500",
-                                isPending && "opacity-30 translate-y-0.5"
-                            )}
+                            className="flex items-center gap-3"
+                            animate={{
+                                opacity: isPending ? 0.3 : 1,
+                                x: isActive ? 2 : 0,
+                            }}
+                            transition={{ duration: 0.3 }}
                         >
-                            {/* State icon */}
+                            {/* State indicator */}
                             <div className="shrink-0 h-5 w-5 flex items-center justify-center">
                                 {isDone ? (
-                                    <CheckCircle2 className="h-4 w-4 text-success" />
+                                    <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 500,
+                                            damping: 30,
+                                        }}
+                                    >
+                                        <CheckCircle2
+                                            className="h-4 w-4"
+                                            style={{ color: "var(--success)" }}
+                                        />
+                                    </motion.div>
                                 ) : isActive ? (
-                                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                                    <motion.div
+                                        className="h-2 w-2 rounded-full"
+                                        style={{ background: "var(--primary)" }}
+                                        animate={{ scale: [1, 1.5, 1], opacity: [1, 0.6, 1] }}
+                                        transition={{ duration: 1.2, repeat: Infinity }}
+                                    />
                                 ) : (
-                                    <div className="h-3.5 w-3.5 rounded-full border border-border" />
+                                    <div
+                                        className="h-2 w-2 rounded-full"
+                                        style={{ background: "var(--border-strong)" }}
+                                    />
                                 )}
                             </div>
 
                             {/* Label */}
                             <span
                                 className={cn(
-                                    "text-sm leading-snug",
+                                    "text-xs leading-snug transition-colors duration-300",
                                     isActive && "text-foreground font-medium",
-                                    isDone && "text-muted-foreground opacity-60",
+                                    isDone && "text-muted-foreground line-through decoration-border",
                                     isPending && "text-muted-foreground"
                                 )}
                             >
                                 {label}
                             </span>
-
-                            {/* Active pulse dot — only on current stage */}
-                            {isActive && (
-                                <span className="ml-auto shrink-0 h-1.5 w-1.5 rounded-full bg-primary animate-[pulse_2s_ease-in-out_infinite]" />
-                            )}
-                        </div>
+                        </motion.div>
                     );
                 })}
             </div>
 
-            {/* ── Progress counter ── */}
-            <p className="text-[11px] text-muted-foreground tabular-nums">
-                {stageIdx + 1} / {stages.length}
+            {/* ── Progress bar ── */}
+            <div
+                className="w-full max-w-xs h-1 rounded-full overflow-hidden"
+                style={{ background: "var(--border)" }}
+            >
+                <motion.div
+                    className="h-full rounded-full"
+                    style={{ background: "var(--gradient-primary)" }}
+                    animate={{ width: `${((stageIdx + 1) / stages.length) * 100}%` }}
+                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                />
+            </div>
+
+            {/* ── Counter ── */}
+            <p className="text-[11px] text-muted-foreground tabular-nums -mt-4">
+                {stageIdx + 1} of {stages.length}
             </p>
 
-            {/* ── Optional footer ── */}
             {footerNote && (
-                <p className="text-xs text-muted-foreground -mt-2">{footerNote}</p>
+                <p className="text-xs text-muted-foreground -mt-4">{footerNote}</p>
             )}
         </div>
     );

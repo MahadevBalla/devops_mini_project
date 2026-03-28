@@ -140,7 +140,7 @@ function DashboardHero({ name }: { name?: string }) {
   const greeting = name ? `Welcome back, ${name.split(" ")[0]}` : "Welcome back";
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-border-subtle shadow-[var(--shadow-sm)]">
+    <div className="relative rounded-2xl overflow-hidden border border-border-subtle shadow-(--shadow-sm)">
       {/* Layered background: mesh ambient + dot grid texture */}
       <div className="absolute inset-0 bg-mesh" />
       <div className="absolute inset-0 dot-grid opacity-50" />
@@ -177,7 +177,7 @@ function DashboardHero({ name }: { name?: string }) {
           className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full
             bg-primary text-primary-foreground text-xs font-semibold
             glow-primary hover:bg-primary-hover
-            shadow-[var(--shadow-glow-sm)] transition-all duration-200"
+            shadow-(--shadow-glow-sm) transition-all duration-200"
         >
           <Sparkles className="h-3.5 w-3.5" />
           Ask AI anything
@@ -207,7 +207,7 @@ function PortfolioPulseBanner({ portfolio }: { portfolio: PortfolioResponse | nu
           border-gradient rounded-xl px-5 py-4 bg-card">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center
-              flex-shrink-0 glow-pulse">
+              shrink-0 glow-pulse">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
@@ -219,10 +219,10 @@ function PortfolioPulseBanner({ portfolio }: { portfolio: PortfolioResponse | nu
               </p>
             </div>
           </div>
-          <Link href="/profile" className="flex-shrink-0">
+          <Link href="/profile" className="shrink-0">
             <button className="flex items-center gap-1.5 px-4 py-2 rounded-lg
               bg-primary text-primary-foreground text-xs font-semibold
-              hover:bg-primary-hover transition-colors shadow-[var(--shadow-sm)]">
+              hover:bg-primary-hover transition-colors shadow-(--shadow-sm)">
               Setup <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </Link>
@@ -282,7 +282,7 @@ function PortfolioPulseBanner({ portfolio }: { portfolio: PortfolioResponse | nu
       <GlowingEffect disabled={false} spread={30} proximity={64} borderWidth={1.5} />
 
       <div className="relative bg-card border border-border rounded-xl overflow-hidden
-        shadow-[var(--shadow-card)]">
+        shadow-(--shadow-card)">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3
           border-b border-border-subtle bg-muted/30">
@@ -317,7 +317,7 @@ function PortfolioPulseBanner({ portfolio }: { portfolio: PortfolioResponse | nu
                 hover:bg-muted/40 transition-colors duration-150"
             >
               <div className={cn(
-                "h-8 w-8 rounded-lg flex items-center justify-center shadow-[var(--shadow-xs)]",
+                "h-8 w-8 rounded-lg flex items-center justify-center shadow-(--shadow-xs)",
                 iconBg, iconColor,
               )}>
                 <Icon className="h-4 w-4" />
@@ -354,7 +354,7 @@ function ToolCard({
       className={cn(
         // card-elevated = bg-surface-2 + shadow-md + border-subtle from globals.css
         "group relative flex flex-col gap-4 rounded-xl p-5 card-elevated",
-        "hover:shadow-[var(--shadow-lg)] hover:-translate-y-1 hover:border-primary/40",
+        "hover:shadow-(--shadow-lg) hover:-translate-y-1 hover:border-primary/40",
         "transition-all duration-200 overflow-hidden",
       )}
     >
@@ -364,8 +364,8 @@ function ToolCard({
 
       <div className="relative flex items-start justify-between">
         <div className={cn(
-          "h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0",
-          "shadow-[var(--shadow-xs)]",
+          "h-11 w-11 rounded-xl flex items-center justify-center shrink-0",
+          "shadow-(--shadow-xs)",
           iconBg, iconColor,
         )}>
           <Icon className="h-5 w-5" />
@@ -393,8 +393,8 @@ function ToolCard({
       </div>
 
       {/* Bottom accent line — slides up on hover */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]
-        bg-gradient-to-r from-transparent via-primary/40 to-transparent
+      <div className="absolute bottom-0 left-0 right-0 h-0.5
+        bg-linear-to-r from-transparent via-primary/40 to-transparent
         opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
     </Link>
   );
@@ -470,7 +470,7 @@ export function DashboardPage() {
 
             {/* ── Footer nudge ── */}
             <div className="flex items-center justify-center gap-2 pt-1 pb-4">
-              <Target className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+              <Target className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <p className="text-xs text-muted-foreground text-center">
                 All tools use your saved profile — set it up once in{" "}
                 <Link href="/profile" className="text-primary hover:underline font-medium">

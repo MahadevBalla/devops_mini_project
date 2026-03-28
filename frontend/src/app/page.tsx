@@ -19,15 +19,16 @@ import { cn } from "@/lib/utils";
 
 // ─── STAT COUNTER ─────────────────────────────────────────────────────────────
 function StatCounter({
-  value, prefix = "", suffix = "", label, sublabel,
+  value, suffix = "", label, sublabel,
   icon: Icon,
 }: {
-  value: number; prefix?: string; suffix?: string;
+  value: number; suffix?: string;
   label: string; sublabel?: string;
   icon?: React.ComponentType<{ className?: string }>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
+  const displayValue = inView ? value : 0;
 
   return (
     <div ref={ref} className="text-center group relative p-10">
@@ -49,17 +50,17 @@ function StatCounter({
       {/* text-stat pattern: tabular-nums, tight tracking, large */}
       <div className="text-3xl sm:text-4xl font-bold tabular-nums flex items-baseline
         justify-center gap-0.5" style={{ letterSpacing: "-0.04em" }}>
-        {prefix && <span className="text-primary text-2xl sm:text-3xl">{prefix}</span>}
-        {inView ? (
-          <NumberFlow
-            value={value}
-            format={{ notation: "compact", maximumFractionDigits: 1 }}
-            transformTiming={{ duration: 1400, easing: "ease-out" }}
-            className="text-foreground"
-          />
-        ) : (
-          <span className="text-foreground">0</span>
-        )}
+        <NumberFlow
+          value={displayValue}
+          format={{
+            style: "currency",
+            currency: "INR",
+            maximumFractionDigits: 0,
+          }}
+          transformTiming={{ duration: 1200, easing: "cubic-bezier(0.16,1,0.3,1)" }}
+          spinTiming={{ duration: 1200 }}
+          opacityTiming={{ duration: 300 }}
+        />
         {suffix && <span className="text-primary text-xl sm:text-2xl">{suffix}</span>}
       </div>
 
@@ -87,7 +88,7 @@ function FeatureCard({
       // card-elevated = bg-surface-2 + shadow-md + border-subtle (from globals.css)
       "group relative rounded-2xl overflow-hidden",
       "card-elevated",
-      "hover:shadow-[var(--shadow-lg)] hover:-translate-y-1",
+      "hover:shadow-(--shadow-lg) hover:-translate-y-1",
       featured && "hover:border-primary/40",
       "transition-all duration-200",
       className,
@@ -97,8 +98,8 @@ function FeatureCard({
         group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
       {/* Bottom accent line */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]
-        bg-gradient-to-r from-transparent via-primary/40 to-transparent
+      <div className="absolute bottom-0 left-0 right-0 h-0.5
+        bg-linear-to-r from-transparent via-primary/40 to-transparent
         opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="relative p-8">
@@ -121,7 +122,7 @@ function FeatureCardWide({
     <div className={cn(
       "group relative rounded-2xl overflow-hidden",
       "card-elevated",
-      "hover:shadow-[var(--shadow-lg)] hover:-translate-y-0.5 hover:border-primary/40",
+      "hover:shadow-(--shadow-lg) hover:-translate-y-0.5 hover:border-primary/40",
       "transition-all duration-200",
       className,
     )}>
@@ -133,8 +134,8 @@ function FeatureCardWide({
       <div className="absolute inset-0 shimmer-brand opacity-0
         group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       {/* Bottom accent */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]
-        bg-gradient-to-r from-transparent via-primary/50 to-transparent
+      <div className="absolute bottom-0 left-0 right-0 h-0.5
+        bg-linear-to-r from-transparent via-primary/50 to-transparent
         opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="relative p-8">
@@ -163,7 +164,7 @@ function IconBadge({
     warning: "text-warning", info: "text-info",
   };
   return (
-    <div className="h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0"
+    <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
       style={styles[color]}>
       <Icon className={cn("h-4 w-4", iconColors[color])} />
     </div>
@@ -173,7 +174,7 @@ function IconBadge({
 // ─── MINI VISUALS ─────────────────────────────────────────────────────────────
 function TaxVisual() {
   return (
-    <div className="mt-6 flex flex-col gap-3 p-4 rounded-xl shadow-[var(--shadow-xs)]"
+    <div className="mt-6 flex flex-col gap-3 p-4 rounded-xl shadow-(--shadow-xs)"
       style={{ background: "var(--surface-3)", border: "1px solid var(--border-subtle)" }}>
       <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
         <span>Old Regime</span>
@@ -200,7 +201,7 @@ function TaxVisual() {
 
 function FIREVisual() {
   return (
-    <div className="mt-6 space-y-3 p-4 rounded-xl shadow-[var(--shadow-xs)]"
+    <div className="mt-6 space-y-3 p-4 rounded-xl shadow-(--shadow-xs)"
       style={{ background: "var(--surface-3)", border: "1px solid var(--border-subtle)" }}>
       <div className="flex items-center gap-3">
         <div className="text-4xl font-bold text-primary tabular-nums" style={{ letterSpacing: "-0.04em" }}>
@@ -233,7 +234,7 @@ function FIREVisual() {
 
 function XRayVisual() {
   return (
-    <div className="mt-6 p-4 rounded-xl space-y-2.5 shadow-[var(--shadow-xs)]"
+    <div className="mt-6 p-4 rounded-xl space-y-2.5 shadow-(--shadow-xs)"
       style={{ background: "var(--surface-3)", border: "1px solid var(--border-subtle)" }}>
       <div className="flex justify-between text-[11px]">
         <span className="text-muted-foreground">Overlap detected</span>
@@ -266,7 +267,7 @@ function ChatVisual() {
     { role: "ai", msg: "New Regime saves ₹47,200. Switch recommended." },
   ];
   return (
-    <div className="mt-6 p-4 rounded-xl space-y-2 shadow-[var(--shadow-xs)]"
+    <div className="mt-6 p-4 rounded-xl space-y-2 shadow-(--shadow-xs)"
       style={{ background: "var(--surface-3)", border: "1px solid var(--border-subtle)" }}>
       {msgs.map((m, i) => (
         <motion.div key={i}
@@ -304,7 +305,7 @@ const STICKY_STEPS = [
           <p className="text-sm font-semibold text-foreground">CAMS statement</p>
           <p className="text-xs text-muted-foreground">PDF · 342 KB · uploaded</p>
         </div>
-        <div className="w-full max-w-[11rem] rounded-full h-1.5 overflow-hidden"
+        <div className="w-full max-w-44 rounded-full h-1.5 overflow-hidden"
           style={{ background: "var(--border)" }}>
           <motion.div className="h-full rounded-full" style={{ background: "var(--gradient-primary)" }}
             initial={{ width: "0%" }} whileInView={{ width: "100%" }}
@@ -326,7 +327,7 @@ const STICKY_STEPS = [
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 8, ease: "linear" }} />
         </div>
-        <div className="grid grid-cols-2 gap-1.5 w-full max-w-[12.5rem] text-[11px]">
+        <div className="grid grid-cols-2 gap-1.5 w-full max-w-50 text-[11px]">
           {["Tax analysis", "FIRE projection", "Overlap scan", "XIRR calc"].map((t, i) => (
             <motion.div key={t} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
@@ -349,7 +350,7 @@ const STICKY_STEPS = [
           style={{ background: "var(--success-subtle)", border: "1px solid oklch(0.60 0.21 145 / 0.25)" }}>
           <BarChart3 className="h-8 w-8 text-success" />
         </div>
-        <div className="w-full max-w-[12.5rem] space-y-1.5">
+        <div className="w-full max-w-50 space-y-1.5">
           {[
             { label: "Tax saved", val: "₹47,200", color: "var(--success)" },
             { label: "XIRR", val: "14.2%", color: "var(--primary)" },
@@ -379,7 +380,7 @@ const STICKY_STEPS = [
           style={{ background: "var(--primary-subtle)", border: "1px solid var(--primary-muted)" }}>
           <Lightbulb className="h-8 w-8 text-primary" />
         </div>
-        <div className="w-full max-w-[14rem] space-y-1.5">
+        <div className="w-full max-w-56 space-y-1.5">
           {[
             "Switch to New Regime → save ₹47,200",
             "Increase SIP ₹3K/mo → retire 2 yrs earlier",
@@ -398,18 +399,6 @@ const STICKY_STEPS = [
     ),
   },
 ];
-
-// ─── SECTION LABEL — same as dashboard ───────────────────────────────────────
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 mb-12">
-      {/* text-eyebrow: 0.75rem uppercase font-600 letter-spacing color:primary */}
-      <p className="text-eyebrow whitespace-nowrap">{children}</p>
-      {/* divider-gradient: transparent→border→border-strong→border→transparent */}
-      <div className="flex-1 divider-gradient" />
-    </div>
-  );
-}
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 export default function Home() {
@@ -534,7 +523,7 @@ export default function Home() {
       {/* surface-1 = pure white/navy card; border top + bottom */}
       <section style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", background: "var(--surface-1)" }}>
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 grid grid-cols-3 gap-8 sm:gap-10">
-          <StatCounter value={47200} prefix="₹" label="Avg tax savings" sublabel="per user on first run" icon={Calculator} />
+          <StatCounter value={47200} label="Avg tax savings" sublabel="per user on first run" icon={Calculator} />
           <StatCounter value={48} suffix=" yrs" label="Avg FIRE age" sublabel="for on-track users" icon={TrendingUp} />
           <StatCounter value={14.2} suffix="%" label="Avg portfolio XIRR" sublabel="vs 11% benchmark" icon={BarChart3} />
         </div>
@@ -559,7 +548,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
 
           {/* Tax Wizard — wide featured card */}
-          <FeatureCardWide className="col-span-1 lg:col-span-2 min-h-[290px]">
+          <FeatureCardWide className="col-span-1 lg:col-span-2 min-h-72.5">
             <div className="max-w-sm">
               <div className="flex items-center gap-2 mb-3">
                 <IconBadge icon={Calculator} color="success" />
@@ -580,7 +569,7 @@ export default function Home() {
           </FeatureCardWide>
 
           {/* FIRE Planner — narrow */}
-          <FeatureCard className="col-span-1 min-h-[290px]">
+          <FeatureCard className="col-span-1 min-h-72.5">
             <div className="flex items-center gap-2 mb-3">
               <IconBadge icon={Flame} color="primary" />
               <span className="text-xs font-semibold text-primary uppercase tracking-wider">FIRE Planner</span>
@@ -599,7 +588,7 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* MF X-Ray — narrow */}
-          <FeatureCard className="col-span-1 min-h-[270px]">
+          <FeatureCard className="col-span-1 min-h-67.5">
             <div className="flex items-center gap-2 mb-3">
               <IconBadge icon={ScanLine} color="primary" />
               <span className="text-xs font-semibold text-primary uppercase tracking-wider">MF X-Ray</span>
@@ -614,7 +603,7 @@ export default function Home() {
           </FeatureCard>
 
           {/* AI Chat — wide featured */}
-          <FeatureCardWide className="col-span-1 lg:col-span-2 min-h-[270px]">
+          <FeatureCardWide className="col-span-1 lg:col-span-2 min-h-67.5">
             <div className="max-w-sm">
               <div className="flex items-center gap-2 mb-3">
                 <IconBadge icon={MessageCircle} color="primary" />
@@ -648,10 +637,10 @@ export default function Home() {
               desc: "AI advisor for every financial turning point.",
             },
           ].map((card) => (
-            <FeatureCard key={card.label} className="min-h-[160px]">
+            <FeatureCard key={card.label} className="min-h-40">
               <div className="flex items-center gap-4">
                 <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0
-                  shadow-[var(--shadow-xs)]"
+                  shadow-(--shadow-xs)"
                   style={{ background: "var(--primary-subtle)", border: "1px solid var(--primary-muted)" }}>
                   <card.icon className="h-5 w-5 text-primary" />
                 </div>
