@@ -273,7 +273,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto" data-lenis-prevent>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
             <PageTransition>
               {children}
