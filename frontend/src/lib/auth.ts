@@ -1,3 +1,4 @@
+// code/frontend/src/lib/auth.ts
 /**
  * Authentication service for handling user authentication
  */

@@ -15,7 +15,7 @@ interface AdvicePanelProps {
   advice: FinanceAdvice;
 }
 
-export function AdvicePanel({ advice }: AdvicePanelProps) {
+export function AdvicePanel({ advice }: Readonly<AdvicePanelProps>) {
   return (
     <div className="space-y-4">
       {/* Summary */}

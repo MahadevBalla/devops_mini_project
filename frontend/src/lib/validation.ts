@@ -1,3 +1,5 @@
+// frontend/src/lib/validation.ts
+
 /**
  * Validation utilities matching backend requirements
  */
