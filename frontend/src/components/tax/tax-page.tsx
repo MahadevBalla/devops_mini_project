@@ -4,7 +4,7 @@
 import { useState } from "react";
 import {
   ChevronRight, ChevronLeft, CheckCircle2,
-  Loader2, ArrowRight, Flame, TrendingUp,
+  ArrowRight, Flame, TrendingUp,
 } from "lucide-react";
 import { AppShell }    from "@/components/layout/app-shell";
 import { Button }      from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { TaxVerdict }       from "./results/tax-verdict";
 import { TaxBar }           from "./results/tax-bar";
 import { MissedDeductions } from "./results/missed-deductions";
 import { SlabBreakdown }    from "./results/slab-breakdown";
+import { AnalysisLoader } from "@/components/ui/analysis-loader";
 
 // ─── Steps ────────────────────────────────────────────────────────────────────
 const STEPS = [
@@ -132,51 +133,6 @@ function StepperHeader({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-// ─── Loading overlay ──────────────────────────────────────────────────────────
-const LOADING_STAGES = [
-  "Validating your income profile...",
-  "Computing Old vs New regime tax...",
-  "Detecting unused deductions...",
-  "Generating AI tax advice...",
-];
-
-function LoadingOverlay() {
-  const [stageIdx, setStageIdx] = useState(0);
-
-  useState(() => {
-    const timers = LOADING_STAGES.map((_, i) =>
-      i > 0 ? setTimeout(() => setStageIdx(i), i * 1200) : null
-    ).filter(Boolean);
-    return () => timers.forEach((t) => t && clearTimeout(t));
-  });
-
-  return (
-    <div className="flex flex-col items-center justify-center py-20 gap-6">
-      <div className="relative">
-        <div className="h-16 w-16 rounded-full border-2 border-primary/20 animate-ping absolute" />
-        <div className="h-16 w-16 rounded-full border-2 border-primary/40 flex items-center justify-center relative">
-          <Loader2 className="h-7 w-7 text-primary animate-spin" />
-        </div>
-      </div>
-      <div className="space-y-2 text-center">
-        {LOADING_STAGES.map((label, i) => (
-          <div key={i} className={cn("flex items-center gap-2 text-sm", i > stageIdx && "opacity-30")}>
-            {i < stageIdx
-              ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-              : i === stageIdx
-              ? <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
-              : <div className="h-4 w-4 rounded-full border border-border shrink-0" />
-            }
-            <span className={cn("text-sm", i === stageIdx ? "text-foreground font-medium" : "text-muted-foreground")}>
-              {label}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -348,7 +304,16 @@ export function TaxPage() {
 
         {phase === "loading" && (
           <div className="bg-card border border-border rounded-xl px-8">
-            <LoadingOverlay />
+            <AnalysisLoader
+              stages={[
+                "Validating your income profile...",
+                "Computing Old vs New regime tax...",
+                "Detecting unused deductions...",
+                "Generating AI tax advice...",
+              ]}
+              stageDelays={[1200, 2400, 3600]}
+              paddingY="py-20"
+            />
           </div>
         )}
 

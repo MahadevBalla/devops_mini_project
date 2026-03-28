@@ -19,7 +19,7 @@ export function Button({
   duration,
   className,
   ...otherProps
-}: {
+}: Readonly<{
   borderRadius?: string;
   children: React.ReactNode;
   as?: any;
@@ -28,7 +28,7 @@ export function Button({
   duration?: number;
   className?: string;
   [key: string]: any;
-}) {
+}>) {
   return (
     <Component
       className={cn(
@@ -56,7 +56,7 @@ export function Button({
 
       <div
         className={cn(
-          "relative flex h-full w-full items-center justify-center border border-slate-800 bg-slate-900/[0.8] text-sm text-white antialiased backdrop-blur-xl",
+          "relative flex h-full w-full items-center justify-center border border-slate-800 bg-slate-900/80 text-sm text-white antialiased backdrop-blur-xl",
           className,
         )}
         style={{

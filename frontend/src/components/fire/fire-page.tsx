@@ -4,7 +4,7 @@
 import { useState } from "react";
 import {
   ChevronRight, ChevronLeft, CheckCircle2,
-  Loader2, ArrowRight, HeartPulse,
+  ArrowRight, HeartPulse,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,9 @@ import { FireHero }    from "./results/fire-hero";
 import { CorpusChart } from "./results/corpus-chart";
 import { SIPCards }    from "./results/sip-cards";
 import { GoalSIPTable } from "./results/goal-sip-table";
+import { AnalysisLoader } from "@/components/ui/analysis-loader";
 
 // ─── Steps config ─────────────────────────────────────────────────────────────
-
 const STEPS = [
   { id: 1, label: "Profile",  desc: "Age & risk"        },
   { id: 2, label: "Money",    desc: "Income & assets"   },
@@ -36,7 +36,6 @@ const STEPS = [
 ];
 
 // ─── Validation ───────────────────────────────────────────────────────────────
-
 function validate(step: number, form: FIREFormState): string | null {
   if (step === 1) {
     const age = Number(form.age);
@@ -60,7 +59,6 @@ function validate(step: number, form: FIREFormState): string | null {
 }
 
 // ─── Payload builder ──────────────────────────────────────────────────────────
-
 function buildPayload(form: FIREFormState): FIREPayload {
   const totalEMI = Number(form.total_emi) || 0;
 
@@ -107,7 +105,6 @@ function buildPayload(form: FIREFormState): FIREPayload {
 }
 
 // ─── Stepper header ───────────────────────────────────────────────────────────
-
 function StepperHeader({
   current,
   onStepClick,
@@ -173,69 +170,7 @@ function StepperHeader({
   );
 }
 
-// ─── Loading overlay ──────────────────────────────────────────────────────────
-
-const LOADING_STAGES = [
-  { label: "Validating your financial profile..." },
-  { label: "Running FIRE projection engine..."    },
-  { label: "Generating AI recommendations..."     },
-];
-
-function LoadingOverlay() {
-  const [stageIdx, setStageIdx] = useState(0);
-
-  useState(() => {
-    const t1 = setTimeout(() => setStageIdx(1), 1500);
-    const t2 = setTimeout(() => setStageIdx(2), 3500);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  });
-
-  return (
-    <div className="flex flex-col items-center justify-center py-20 gap-6">
-      <div className="relative">
-        <div className="h-16 w-16 rounded-full border-2 border-primary/20 animate-ping absolute" />
-        <div className="h-16 w-16 rounded-full border-2 border-primary/40 flex items-center justify-center relative">
-          <Loader2 className="h-7 w-7 text-primary animate-spin" />
-        </div>
-      </div>
-      <div className="space-y-2 text-center">
-        {LOADING_STAGES.map((stage, i) => (
-          <div
-            key={i}
-            className={cn(
-              "flex items-center gap-2 text-sm transition-all",
-              i > stageIdx ? "opacity-30" : ""
-            )}
-          >
-            {i < stageIdx ? (
-              <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-            ) : i === stageIdx ? (
-              <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
-            ) : (
-              <div className="h-4 w-4 rounded-full border border-border shrink-0" />
-            )}
-            <span
-              className={cn(
-                "text-sm",
-                i === stageIdx
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground"
-              )}
-            >
-              {stage.label}
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Projecting your corpus year by year — takes ~5 seconds
-      </p>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
-
 export function FIREPage() {
   type Phase = "gate" | "wizard" | "review" | "loading" | "result";
 
@@ -413,7 +348,16 @@ export function FIREPage() {
 
         {phase === "loading" && (
           <div className="bg-card border border-border rounded-xl px-8">
-            <LoadingOverlay />
+            <AnalysisLoader
+              stages={[
+                "Validating your financial profile...",
+                "Running FIRE projection engine...",
+                "Generating AI recommendations...",
+              ]}
+              stageDelays={[1500, 3500]}
+              footerNote="Projecting your corpus year by year — takes ~5 seconds"
+              paddingY="py-20"
+            />
           </div>
         )}
 

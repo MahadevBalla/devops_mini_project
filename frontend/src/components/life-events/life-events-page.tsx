@@ -4,7 +4,7 @@
 import { useState } from "react";
 import {
   ChevronLeft, ChevronRight, CheckCircle2,
-  Loader2, TrendingUp, Calculator, Zap,
+  Loader2, TrendingUp, Calculator,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ import { EventHero } from "./results/event-hero";
 import { AllocationWaterfall } from "./results/allocation-waterfall";
 import { InsuranceGaps } from "./results/insurance-gaps";
 import { PriorityTimeline } from "./results/priority-timeline";
+import { AnalysisLoader } from "@/components/ui/analysis-loader";
 
 const STEPS = [
   { id: 1, label: "Life Event", desc: "What happened?" },
@@ -119,55 +120,6 @@ function StepperHeader({
   );
 }
 
-const LOADING_STAGES = [
-  "Validating your financial profile...",
-  "Analysing your life event...",
-  "Computing allocations & gaps...",
-  "Generating personalised AI advice...",
-];
-
-function LoadingOverlay({ eventType }: Readonly<{ eventType: string | null }>) {
-  const [stageIdx, setStageIdx] = useState(0);
-  const meta = eventType ? EVENT_META[eventType as keyof typeof EVENT_META] : null;
-  const EventIcon = meta?.icon;
-
-  useState(() => {
-    const timers = LOADING_STAGES.map((_, i) =>
-      i > 0 ? setTimeout(() => setStageIdx(i), i * 1100) : null
-    ).filter(Boolean);
-    return () => timers.forEach((t) => t && clearTimeout(t));
-  });
-
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-6">
-      <div className="relative">
-        <div className="h-16 w-16 rounded-full border-2 border-primary/20 animate-ping absolute" />
-        <div className="h-16 w-16 rounded-full border-2 border-primary/40 flex items-center justify-center relative">
-          {EventIcon
-            ? <EventIcon className="h-7 w-7 text-primary" />
-            : <Loader2 className="h-7 w-7 text-primary animate-spin" />
-          }
-        </div>
-      </div>
-      <div className="space-y-2 text-center">
-        {LOADING_STAGES.map((label, i) => (
-          <div key={i} className={cn("flex items-center gap-2 text-sm", i > stageIdx && "opacity-30")}>
-            {i < stageIdx
-              ? <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
-              : i === stageIdx
-                ? <Loader2 className="h-4 w-4 text-primary animate-spin flex-shrink-0" />
-                : <div className="h-4 w-4 rounded-full border border-border flex-shrink-0" />
-            }
-            <span className={cn(i === stageIdx ? "text-foreground font-medium" : "text-muted-foreground")}>
-              {label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function LifeEventsPage() {
   type Phase = "gate" | "wizard" | "review" | "loading" | "result";
 
@@ -238,7 +190,6 @@ export function LifeEventsPage() {
   }
 
   const meta = form.event_type ? EVENT_META[form.event_type] : null;
-  const EventIcon = meta?.icon;
 
   const stepTitles = [
     "What's Happening?",
@@ -314,7 +265,17 @@ export function LifeEventsPage() {
 
         {phase === "loading" && (
           <div className="bg-card border border-border rounded-xl px-8">
-            <LoadingOverlay eventType={form.event_type} />
+            <AnalysisLoader
+              stages={[
+                "Validating your financial profile...",
+                "Analysing your life event...",
+                "Computing allocations & gaps...",
+                "Generating personalised AI advice...",
+              ]}
+              stageDelays={[1100, 2200, 3300]}
+              icon={meta?.icon ?? Loader2}
+              iconStatic={!!meta?.icon}
+            />
           </div>
         )}
 

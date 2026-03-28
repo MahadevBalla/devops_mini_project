@@ -3,15 +3,15 @@
 
 import { useState } from "react";
 import {
-  CheckCircle2, Loader2, RotateCcw, Microscope,
+  RotateCcw, Microscope,
   TrendingUp, ArrowLeftRight, TrendingDown, Wrench, Download, LucideIcon
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { AdvicePanel } from "@/components/ui/advice-panel";
+import { AnalysisLoader } from "@/components/ui/analysis-loader";
 import { getMFXray } from "@/lib/finance";
 import type { MFXRayApiResponse, UploadStatus } from "@/lib/mf-xray-types";
-import { cn } from "@/lib/utils";
 
 import { UploadZone } from "./upload-zone";
 import { XRayHero } from "./results/xray-hero";
@@ -20,66 +20,6 @@ import { HoldingsTable } from "./results/holdings-table";
 import { OverlapPairs } from "./results/overlap-pairs";
 import { ExpenseAlert } from "./results/expense-alert";
 import { RebalancingPlan } from "./results/rebalancing-plan";
-
-// ─── Loading overlay ──────────────────────────────────────────────────────────
-const STAGES = [
-  "Parsing your statement...",
-  "Fetching live NAV from AMFI...",
-  "Computing XIRR & absolute returns...",
-  "Detecting fund overlap...",
-  "Generating AI insights...",
-];
-
-function AnalysingOverlay({ filename }: Readonly<{ filename: string }>) {
-  const [stageIdx, setStageIdx] = useState(0);
-
-  useState(() => {
-    const timers = STAGES.map((_, i) =>
-      i > 0 ? setTimeout(() => setStageIdx(i), i * 1200) : null
-    ).filter(Boolean);
-    return () => timers.forEach((t) => t && clearTimeout(t));
-  });
-
-  return (
-    <div className="flex flex-col items-center justify-center py-14 gap-6 px-4">
-      {/* Pulsing icon */}
-      <div className="relative">
-        <div className="h-16 w-16 rounded-full border-2 border-primary/20 animate-ping absolute" />
-        <div className="h-16 w-16 rounded-full border-2 border-primary/30 flex items-center justify-center relative bg-card">
-          <Microscope className="h-7 w-7 text-primary" />
-        </div>
-      </div>
-
-      {/* File name */}
-      <div className="text-center space-y-1">
-        <p className="text-sm font-semibold text-foreground">Analysing your portfolio</p>
-        <p className="text-xs text-muted-foreground truncate max-w-60">{filename}</p>
-      </div>
-
-      {/* Stage tracker */}
-      <div className="w-full max-w-xs space-y-2.5">
-        {STAGES.map((label, i) => (
-          <div key={i} className={cn("flex items-center gap-2.5 text-sm",
-            i > stageIdx && "opacity-30")}>
-            {i < stageIdx
-              ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-              : i === stageIdx
-                ? <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
-                : <div className="h-4 w-4 rounded-full border border-border shrink-0" />
-            }
-            <span className={cn(
-              i === stageIdx ? "text-foreground font-medium" : "text-muted-foreground"
-            )}>
-              {label}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-xs text-muted-foreground">Takes 5–15 seconds</p>
-    </div>
-  );
-}
 
 // ─── Feature highlight tiles ──────────────────────────────────────────────────
 const FEATURE_TILES: { icon: LucideIcon; label: string }[] = [
@@ -236,7 +176,22 @@ export function MFXRayPage() {
         {/* ── Loading ── */}
         {isUploading && !result && (
           <div className="bg-card border border-border rounded-xl">
-            <AnalysingOverlay filename={selectedFile?.name ?? "statement"} />
+            <AnalysisLoader
+              stages={[
+                "Parsing your statement...",
+                "Fetching live NAV from AMFI...",
+                "Computing XIRR & absolute returns...",
+                "Detecting fund overlap...",
+                "Generating AI insights...",
+              ]}
+              stageDelays={[1200, 2400, 3600, 4800]}
+              icon={Microscope}
+              iconStatic
+              title="Analysing your portfolio"
+              subtitle={selectedFile?.name ?? "statement"}
+              footerNote="Takes 5–15 seconds"
+              paddingY="py-14"
+            />
           </div>
         )}
 

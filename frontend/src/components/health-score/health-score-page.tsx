@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronRight, ChevronLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { ScenarioStartGate, type ScenarioChoice } from "@/components/ui/scenario-start-gate";
@@ -16,9 +16,9 @@ import { StepMoney } from "./steps/step-money";
 import { StepProtection } from "./steps/step-protection";
 import { StepTaxGoals } from "./steps/step-tax-goals";
 import { HealthScoreResults } from "./results/health-score-results";
+import { AnalysisLoader } from "@/components/ui/analysis-loader";
 
 // ─── Step config ──────────────────────────────────────────────────────────────
-
 const STEPS = [
   { id: 1, label: "About You",   desc: "Basic profile",      required: true  },
   { id: 2, label: "Your Money",  desc: "Income & assets",    required: true  },
@@ -27,7 +27,6 @@ const STEPS = [
 ];
 
 // ─── Validation per step ──────────────────────────────────────────────────────
-
 function validateStep(step: number, form: WizardFormState): string | null {
   if (step === 1) {
     if (!form.age || Number(form.age) < 18 || Number(form.age) > 70)
@@ -50,7 +49,6 @@ function validateStep(step: number, form: WizardFormState): string | null {
 }
 
 // ─── Payload builder ──────────────────────────────────────────────────────────
-
 function buildPayload(form: WizardFormState): HealthScorePayload {
   return {
     age: Number(form.age),
@@ -71,7 +69,6 @@ function buildPayload(form: WizardFormState): HealthScorePayload {
 }
 
 // ─── Progress stepper component ───────────────────────────────────────────────
-
 function StepperHeader({
   current,
   onStepClick,
@@ -124,57 +121,8 @@ function StepperHeader({
   );
 }
 
-// ─── Loading overlay with staged messages ─────────────────────────────────────
-
-const LOADING_STAGES = [
-  { label: "Validating your financial data...",   duration: 1500 },
-  { label: "Running finance engine...",           duration: 2000 },
-  { label: "Generating AI recommendations...",   duration: 99999 },
-];
-
-function LoadingOverlay() {
-  const [stageIdx, setStageIdx] = useState(0);
-
-  useState(() => {
-    let elapsed = 0;
-    LOADING_STAGES.slice(0, -1).forEach((stage, i) => {
-      const timer = setTimeout(() => setStageIdx(i + 1), elapsed + stage.duration);
-      elapsed += stage.duration;
-      return () => clearTimeout(timer);
-    });
-  });
-
-  return (
-    <div className="flex flex-col items-center justify-center py-20 gap-6">
-      <div className="relative">
-        <div className="h-16 w-16 rounded-full border-2 border-primary/20 animate-ping absolute" />
-        <div className="h-16 w-16 rounded-full border-2 border-primary/40 flex items-center justify-center relative">
-          <Loader2 className="h-7 w-7 text-primary animate-spin" />
-        </div>
-      </div>
-
-      {/* Staged steps */}
-      <div className="space-y-2 text-center">
-        {LOADING_STAGES.map((stage, i) => (
-          <div key={i} className={cn("flex items-center gap-2 text-sm transition-all", i > stageIdx ? "opacity-30" : "")}>
-            {i < stageIdx
-              ? <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
-              : i === stageIdx
-              ? <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
-              : <div className="h-4 w-4 rounded-full border border-border shrink-0" />}
-            <span className={cn("text-sm", i === stageIdx ? "text-foreground font-medium" : "text-muted-foreground")}>
-              {stage.label}
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="text-xs text-muted-foreground">This usually takes 5–8 seconds</p>
-    </div>
-  );
-}
 
 // ─── Review summary card ──────────────────────────────────────────────────────
-
 function ReviewCard({
   form,
   onEdit,
@@ -262,7 +210,6 @@ function ReviewCard({
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-
 export function HealthScorePage() {
   type Phase = "gate" | "wizard" | "review" | "loading" | "result";
 
@@ -349,7 +296,16 @@ export function HealthScorePage() {
 
         {phase === "loading" && (
           <div className="bg-card border border-border rounded-xl px-8">
-            <LoadingOverlay />
+            <AnalysisLoader
+              stages={[
+                "Validating your financial data...",
+                "Running finance engine...",
+                "Generating AI recommendations...",
+              ]}
+              stageDelays={[1500, 3500]}
+              footerNote="This usually takes 5–8 seconds"
+              paddingY="py-20"
+            />
           </div>
         )}
 

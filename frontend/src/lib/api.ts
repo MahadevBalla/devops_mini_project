@@ -1,3 +1,4 @@
+// frontend/src/lib/api.ts
 /**
  * API service for making HTTP requests to the backend
  */
