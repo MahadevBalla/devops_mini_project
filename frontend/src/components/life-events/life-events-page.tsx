@@ -28,6 +28,7 @@ import { AllocationWaterfall } from "./results/allocation-waterfall";
 import { InsuranceGaps } from "./results/insurance-gaps";
 import { PriorityTimeline } from "./results/priority-timeline";
 import { AnalysisLoader } from "@/components/ui/analysis-loader";
+import { storeToolSession } from "@/lib/chat";
 
 const STEPS = [
   { id: 1, label: "Life Event", desc: "What happened?" },
@@ -174,6 +175,7 @@ export function LifeEventsPage() {
       const payload = buildLifeEventPayload(form);
       const res = await getLifeEventPlan(payload as unknown as Record<string, unknown>);
       setResult(res as unknown as LifeEventApiResponse);
+      storeToolSession("life", res.session_id);
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");

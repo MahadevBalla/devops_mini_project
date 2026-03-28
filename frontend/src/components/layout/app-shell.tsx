@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "./page-transition";
+import { FloatingDock } from "./floating-dock";
+import { clearAllSessions } from "@/lib/chat";
 
 import {
   Settings, LogOut, Loader2, Sparkles,
@@ -51,6 +53,7 @@ export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
+    clearAllSessions();
     setIsLoggingOut(true);
     try {
       await authService.logout();
@@ -281,6 +284,8 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </main>
       </div>
+
+      <FloatingDock />
     </div>
   );
 }

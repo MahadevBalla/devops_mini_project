@@ -22,6 +22,37 @@ export interface StreamCallbacks {
   onError: (err: Error) => void;
 }
 
+// ── Session key constants (single source of truth) ───────────────────────────
+// Written here so both chat.ts and floating-dock.tsx read/write identically.
+
+export const SESSION_KEYS = {
+  // Written by each tool page after a successful run
+  fire: "mm_fire_session_id",
+  health: "mm_health_session_id",
+  tax: "mm_tax_session_id",
+  mf: "mm_mf_session_id",
+  life: "mm_life_session_id",
+  couple: "mm_couple_session_id",
+  // Generic — always mirrors the most recent tool run
+  latest: "mm_session_id",
+  // Fallback — standalone chat session (no tool context)
+  chat: "chat_session_id",
+} as const;
+
+// ── Session helpers (called by tool pages) ────────────────────────────────────
+/**
+ * Call this in every tool page after a successful API response.
+ * Stores to both the feature-specific key AND the generic latest key.
+ */
+export function storeToolSession(
+  feature: keyof Omit<typeof SESSION_KEYS, "latest" | "chat">,
+  sessionId: string
+): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SESSION_KEYS[feature], sessionId);
+  localStorage.setItem(SESSION_KEYS.latest, sessionId); // always update generic
+}
+
 // ── Auth header helper — called lazily, never at module level ──────────────────
 function getHeaders(): Record<string, string> {
   const token = authService.getAccessToken();
@@ -29,7 +60,9 @@ function getHeaders(): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
 }
 
-// ── Session management ─────────────────────────────────────────────────────────
+// ── Session resolution ──────────────────────────────────────────────────────────
+// Module-level promise lock — prevents duplicate session creation on rapid calls
+let sessionPromise: Promise<string> | null = null;
 
 async function createChatSession(): Promise<string> {
   const data = await authService.authenticatedRequest(() =>
@@ -38,19 +71,54 @@ async function createChatSession(): Promise<string> {
   return data.session_id;
 }
 
+/**
+ * Priority order:
+ * 1. Latest tool session  → has full financial context (FIRE/health/tax state)
+ * 2. Existing chat session → already established, no context
+ * 3. Create new chat session via POST /api/session → cold start fallback
+ */
 export async function getOrCreateChatSession(): Promise<string> {
   if (typeof window === "undefined") throw new Error("SSR not supported");
-  const stored = localStorage.getItem("chat_session_id");
-  if (stored) return stored;
-  const id = await createChatSession();
-  localStorage.setItem("chat_session_id", id);
-  return id;
+
+  // Priority 1 — tool session with financial state
+  const toolSession = localStorage.getItem(SESSION_KEYS.latest);
+  if (toolSession) return toolSession;
+
+  // Priority 2 — existing standalone chat session
+  const chatSession = localStorage.getItem(SESSION_KEYS.chat);
+  if (chatSession) return chatSession;
+
+  // Priority 3 — create fresh session, with lock to prevent parallel calls
+  if (!sessionPromise) {
+    sessionPromise = createChatSession().then((id) => {
+      localStorage.setItem(SESSION_KEYS.chat, id);
+      sessionPromise = null;
+      return id;
+    }).catch((err) => {
+      sessionPromise = null; // reset lock on failure so retry is possible
+      throw err;
+    });
+  }
+
+  return sessionPromise;
 }
 
+/**
+ * Clears ONLY the standalone chat session.
+ * Use for "Clear chat" button — preserves tool sessions and their financial context.
+ */
 export function clearChatSession(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("chat_session_id");
-  }
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(SESSION_KEYS.chat);
+}
+
+/**
+ * Clears ALL session keys including tool sessions.
+ * Use ONLY on logout — forces fresh context on next login.
+ */
+export function clearAllSessions(): void {
+  if (typeof window === "undefined") return;
+  Object.values(SESSION_KEYS).forEach((key) => localStorage.removeItem(key));
 }
 
 // ── GET /api/chat/stream ───────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-// code/frontend/src/lib/auth.ts
+// frontend/src/lib/auth.ts
 /**
  * Authentication service for handling user authentication
  */
@@ -261,14 +261,18 @@ class AuthService {
   ): Promise<T> {
     try {
       return await request();
-    } catch (error: any) {
-      // If token is expired, try to refresh
-      if (error?.status === 401 && this.refreshToken) {
+    } catch (error: unknown) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        (error as { status?: number }).status === 401 &&
+        this.refreshToken
+      ) {
         try {
           await this.refreshAccessToken();
           return await request();
-        } catch (refreshError) {
-          // Refresh failed, clear tokens and throw original error
+        } catch {
           this.clearTokens();
           throw error;
         }

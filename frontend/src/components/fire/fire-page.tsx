@@ -27,6 +27,7 @@ import { CorpusChart } from "./results/corpus-chart";
 import { SIPCards }    from "./results/sip-cards";
 import { GoalSIPTable } from "./results/goal-sip-table";
 import { AnalysisLoader } from "@/components/ui/analysis-loader";
+import { storeToolSession } from "@/lib/chat";
 
 // ─── Steps config ─────────────────────────────────────────────────────────────
 const STEPS = [
@@ -222,6 +223,7 @@ export function FIREPage() {
       const payload = buildPayload(form);
       const res = await getFIREPlan(payload);
       setResult(res);
+      storeToolSession("fire", res.session_id);
       setPhase("result");
     } catch (err) {
       setError(

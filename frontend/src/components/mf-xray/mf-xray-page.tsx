@@ -20,6 +20,7 @@ import { HoldingsTable } from "./results/holdings-table";
 import { OverlapPairs } from "./results/overlap-pairs";
 import { ExpenseAlert } from "./results/expense-alert";
 import { RebalancingPlan } from "./results/rebalancing-plan";
+import { storeToolSession } from "@/lib/chat";
 
 // ─── Feature highlight tiles ──────────────────────────────────────────────────
 const FEATURE_TILES: { icon: LucideIcon; label: string }[] = [
@@ -95,6 +96,7 @@ export function MFXRayPage() {
     try {
       const res = await getMFXray(selectedFile) as unknown as MFXRayApiResponse;
       setResult(res);
+      storeToolSession("mf", res.session_id);
       setUploadStatus("success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed. Please try again.");

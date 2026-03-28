@@ -19,6 +19,7 @@ import {
   type CoupleFormState,
   type CoupleApiResponse,
 } from "@/lib/couple-types";
+import { storeToolSession } from "@/lib/chat";
 
 import { StepAbout }    from "./steps/step-about";
 import { StepPartners } from "./steps/step-partners";
@@ -172,6 +173,7 @@ export function CouplePlannerPage() {
       const payload = buildCouplePayload(form);
       const res = await getCouplePlan(payload);
       setResult(res as unknown as CoupleApiResponse);
+      storeToolSession("couple", res.session_id);
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");

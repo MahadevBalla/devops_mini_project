@@ -27,6 +27,7 @@ import { TaxBar }           from "./results/tax-bar";
 import { MissedDeductions } from "./results/missed-deductions";
 import { SlabBreakdown }    from "./results/slab-breakdown";
 import { AnalysisLoader } from "@/components/ui/analysis-loader";
+import { storeToolSession } from "@/lib/chat";
 
 // ─── Steps ────────────────────────────────────────────────────────────────────
 const STEPS = [
@@ -196,6 +197,7 @@ export function TaxPage() {
       );
       const res = await getTaxAnalysis(payload);
       setResult(res);
+      storeToolSession("tax", res.session_id);
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");

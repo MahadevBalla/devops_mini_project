@@ -17,6 +17,7 @@ import { StepProtection } from "./steps/step-protection";
 import { StepTaxGoals } from "./steps/step-tax-goals";
 import { HealthScoreResults } from "./results/health-score-results";
 import { AnalysisLoader } from "@/components/ui/analysis-loader";
+import { storeToolSession } from "@/lib/chat";
 
 // ─── Step config ──────────────────────────────────────────────────────────────
 const STEPS = [
@@ -261,6 +262,7 @@ export function HealthScorePage() {
       const payload = buildPayload(form);
       const res = await getHealthScore(payload);
       setResult(res);
+      storeToolSession("health", res.session_id);
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
