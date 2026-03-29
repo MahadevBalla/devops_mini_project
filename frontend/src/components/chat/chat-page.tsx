@@ -20,13 +20,13 @@ import {
 import { cn } from "@/lib/utils";
 
 export function ChatPage() {
-  const [messages, setMessages]       = useState<ChatMessage[]>([]);
-  const [sessionId, setSessionId]     = useState<string | null>(null);
+  const [messages, setMessages]         = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId]       = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
-  const [isStreaming, setIsStreaming]  = useState(false);
+  const [isStreaming, setIsStreaming]   = useState(false);
 
-  const abortRef        = useRef<AbortController | null>(null);
-  const streamingIdRef  = useRef<string | null>(null);
+  const abortRef       = useRef<AbortController | null>(null);
+  const streamingIdRef = useRef<string | null>(null);
 
   // ── Bootstrap session ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -104,7 +104,13 @@ export function ChatPage() {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMsg.id
-                  ? { ...m, content: "Something went wrong. Please try again.", isLoading: false, isStreaming: false, isError: true }
+                  ? {
+                      ...m,
+                      content: "Something went wrong. Please try again.",
+                      isLoading: false,
+                      isStreaming: false,
+                      isError: true,
+                    }
                   : m
               )
             );
@@ -139,17 +145,22 @@ export function ChatPage() {
 
   return (
     <AppShell noPadding>
-      <div className="flex flex-col w-full relative" style={{ height: "100%" }}>
+      {/*
+        KEY LAYOUT:
+        - Outer div is a flex column filling 100% height
+        - Header: shrink-0 (never compresses)
+        - Middle scroll area: flex-1 overflow-y-auto
+        - Input bar: shrink-0 at the bottom (sticky by being last in the flex col)
+      */}
+      <div className="fixed inset-x-0 bottom-0 top-16 lg:top-0 lg:left-60 flex flex-col overflow-hidden bg-background">
 
         {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-background/80 backdrop-blur-md z-10">
+        <div className="shrink-0 flex items-center justify-between px-6 py-3 border-b border-border bg-background/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            {/* Logo mark */}
             <div className="relative">
               <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
                 <BrainCircuit className="h-5 w-5 text-primary" />
               </div>
-              {/* Live status dot */}
               {sessionReady && (
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
                   <span className={cn(
@@ -219,9 +230,13 @@ export function ChatPage() {
           </div>
         </div>
 
-        {/* ── Message area ────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="w-full max-w-3xl mx-auto pb-36 pt-2">
+        {/* ── Scrollable message area ──────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {/* 
+            max-w-5xl = 1024px — wide enough to use the space, 
+            px-8 adds breathing room on the sides
+          */}
+          <div className="w-full max-w-5xl mx-auto px-8 pt-4 pb-6">
             {messages.length === 0 ? (
               <SuggestionChips
                 onSelect={handleSend}
@@ -233,17 +248,21 @@ export function ChatPage() {
           </div>
         </div>
 
-        {/* ── Floating input bar ───────────────────────────────────────────── */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
-          <div className="max-w-3xl mx-auto px-3 pb-3 pointer-events-auto">
-            <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-            <div className="relative rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-border/50 bg-background/95 backdrop-blur-xl overflow-hidden">
-              <ChatInputBar
-                onSend={handleSend}
-                onStop={handleStop}
-                isStreaming={isStreaming}
-                disabled={!sessionReady}
-              />
+        {/* ── Input bar — shrink-0 keeps it pinned at the bottom ──────────── */}
+        <div className="shrink-0 sticky bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur-xl">
+          {/* Gradient fade above to soften the last message */}
+          <div className="relative">
+            <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+            {/* Constrain input to same max-width as content */}
+            <div className="w-full max-w-5xl mx-auto px-6 py-3">
+              <div className="rounded-2xl shadow-lg ring-1 ring-border/50 bg-card overflow-hidden">
+                <ChatInputBar
+                  onSend={handleSend}
+                  onStop={handleStop}
+                  isStreaming={isStreaming}
+                  disabled={!sessionReady}
+                />
+              </div>
             </div>
           </div>
         </div>
