@@ -1,52 +1,63 @@
 # AI Money Mentor Frontend
 
-This frontend delivers the complete user experience for AI Money Mentor, including onboarding, financial planners, portfolio views, and AI chat.
+Next.js frontend for AI Money Mentor.
 
-It is designed to make complex personal finance decisions feel simple through guided workflows, strong visual hierarchy, and actionable outputs.
+Handles auth, profile capture, planners, portfolio views, chat, and voice interactions. It calls the FastAPI backend and turns computed results into usable workflows.
 
-## Frontend Scope
+## Scope
 
-- Authentication and account onboarding UI
-- Profile capture and portfolio context screens
-- Guided financial tools (FIRE, Health Score, Tax, Life Events, Couple Planner, MF X-Ray)
-- Conversational AI assistant with streaming responses
-- Voice input/output flows for hands-free interaction
-- Result visualization, summaries, and decision-friendly cards
+- Authentication and onboarding UI
+- Profile capture and portfolio screens
+- Planner flows for FIRE, health score, tax, life events, couple planning, and MF X-Ray
+- Chat UI with streaming responses
+- Voice input and playback flows
+- Result views, summaries, and comparison cards
 
 ## Product Experience Goals
 
-- Fast, low-friction data entry for users who are not finance experts
-- Clear separation of "portfolio" vs "what-if scenario" runs
-- Transparent, explainable outputs instead of black-box recommendations
-- Responsive UI that works smoothly on desktop and mobile
-- Consistent design language across all tools
+- Keep data entry fast for non-expert users
+- Make portfolio runs and what-if runs clearly different
+- Show outputs in a way users can inspect, not just accept
+- Keep flows usable on both desktop and mobile
+- Reuse the same interaction patterns across features
+
+## How It Connects to Backend
+
+- Calls FastAPI endpoints per feature; there is no generic "process" call
+- Receives deterministic results and generated advice from the backend
+- Renders planner flows, result states, and follow-up interactions on top of those responses
+- Uses session-based APIs for chat and feature continuity
 
 ## UI Architecture
 
-The UI is organized by feature modules and shared building blocks:
+The frontend is split by routing, feature UI, and shared client code.
 
-- App-level routing and page composition under `src/app`
-- Reusable feature components under `src/components`
-- Data-access clients and domain typing under `src/lib`
-- Shared theming and global styles for a consistent visual system
+- `src/app/` holds App Router pages, layouts, and route-level composition
+- `src/components/` holds feature modules and shared UI pieces
+- `src/lib/` holds API clients, shared types, and small helpers
 
-## Design System and Interaction Style
+The separation is simple:
 
-- Utility-first styling with a consistent token-based theme
-- Motion and transition patterns for progressive disclosure
-- Card-first layouts for financial summaries and recommendations
-- Accessible form controls and feedback states for long workflows
+- routes decide what page is shown
+- components handle feature rendering and interaction
+- `lib` handles backend calls and shared client-side logic
 
-## AI Chat Experience
+## Key UI Patterns
 
-The chat interface is built for financial conversations, not generic chat.
-It includes:
+- Card-based result views for summaries, actions, and comparisons
+- Step-based flows where a feature needs staged input
+- Loading and analysis states for backend-driven workflows
+- Progressive disclosure so users do not have to process everything at once
+
+## Chat Experience
+
+The chat UI is session-based and built around financial follow-ups.
 
 - Suggested prompt chips
-- Streamed AI responses
+- Streamed responses
 - Voice recording support
 - Speech playback support
-- Message formatting optimized for financial explanations
+- Message formatting tuned for financial explanations
 
 ## UI Screenshots
 
@@ -60,5 +71,11 @@ It includes:
 
 ## Notes
 
-This README is intentionally frontend-description only.
-The full setup, installation, and run guide is maintained in the root project README.
+This README focuses on frontend structure and UX.
+
+For setup and system-level details:
+
+- Root README: [`../README.md`](../README.md)
+- Backend: [`../backend/README.md`](../backend/README.md)
+- Architecture: [`../docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)
+- API Contract: [`../docs/API_CONTRACT.md`](../docs/API_CONTRACT.md)
