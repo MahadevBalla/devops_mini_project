@@ -46,11 +46,13 @@ export const SESSION_KEYS = {
  */
 export function storeToolSession(
   feature: keyof Omit<typeof SESSION_KEYS, "latest" | "chat">,
-  sessionId: string
+  sessionId: string,
+  sessionType: "portfolio" | "scenario" = "portfolio"
 ): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(SESSION_KEYS[feature], sessionId);
   localStorage.setItem(SESSION_KEYS.latest, sessionId); // always update generic
+  localStorage.setItem("mm_latest_session_type", sessionType);
 }
 
 // ── Auth header helper — called lazily, never at module level ──────────────────

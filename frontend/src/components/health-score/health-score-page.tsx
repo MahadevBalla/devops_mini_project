@@ -221,9 +221,11 @@ export function HealthScorePage() {
   const [form, setForm] = useState<WizardFormState>(DEFAULT_FORM_STATE);
   const [error, setError] = useState("");
   const [result, setResult] = useState<HealthScoreApiResponse | null>(null);
+  const [isPortfolioRun, setIsPortfolioRun] = useState(false);
 
   async function handleGateChoice(choice: ScenarioChoice) {
     if (choice === "portfolio") {
+      setIsPortfolioRun(true);
       try {
         const portfolio = await getPortfolio();
         if (!isProfileEmpty(portfolio)) {
@@ -262,9 +264,9 @@ export function HealthScorePage() {
     setPhase("loading");
     try {
       const payload = buildPayload(form);
-      const res = await getHealthScore(payload);
+      const res = await getHealthScore(payload, isPortfolioRun);
       setResult(res);
-      storeToolSession("health", res.session_id);
+      storeToolSession("health", res.session_id, isPortfolioRun ? "portfolio" : "scenario");
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -276,6 +278,7 @@ export function HealthScorePage() {
     setResult(null);
     setForm(DEFAULT_FORM_STATE);
     setStep(1);
+    setIsPortfolioRun(false);
     setError("");
     setPhase("gate");
   }

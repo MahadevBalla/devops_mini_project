@@ -15,7 +15,7 @@ from agents.guardrail_agent import run_guardrail
 from agents.mf_xray_agent import generate_mf_xray_advice
 from core.dependencies import get_current_user
 from core.exceptions import MoneyMentorError
-from db.session_store import User, append_log, create_session, update_session_state
+from db.session_store import User, append_log, create_session, update_session_state, update_portfolio_result, save_scenario
 from finance.amfi import ensure_nav_cache
 from finance.mf_xray import (
     analyse_portfolio,
@@ -187,20 +187,33 @@ async def mf_xray(
             )
         )
 
+        summarized_result = {
+            "total_invested": result.total_invested,
+            "total_current_value": result.total_current_value,
+            "absolute_return_pct": result.absolute_return_pct,
+            "overall_xirr": result.overall_xirr,
+            "benchmark_base": result.benchmark_base,
+            "xirr_vs_benchmark": result.xirr_vs_benchmark,
+            "num_funds": len(result.holdings),
+            "high_expense_funds": result.high_expense_funds,
+        }
+        
         await update_session_state(
             session_id,
             current_user.id,
             "mf",
-            {
-                "total_invested": result.total_invested,
-                "total_current_value": result.total_current_value,
-                "absolute_return_pct": result.absolute_return_pct,
-                "overall_xirr": result.overall_xirr,
-                "benchmark_base": result.benchmark_base,
-                "xirr_vs_benchmark": result.xirr_vs_benchmark,
-                "num_funds": len(result.holdings),
-                "high_expense_funds": result.high_expense_funds,
-            },
+            summarized_result,
+        )
+        
+        await update_portfolio_result(current_user.id, "mf", summarized_result)
+        
+        await save_scenario(
+            user_id=current_user.id,
+            feature="mf",
+            input_data={"filename": filename, "type": "statement"},
+            result_data=summarized_result,
+            name="MF Statement Upload",
+            session_type="portfolio"
         )
 
         return MFXRayResponse(

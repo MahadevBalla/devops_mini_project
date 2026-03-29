@@ -131,6 +131,14 @@ async def health_score(
         if req.use_profile:
             await update_portfolio_result(current_user.id, "health", summary)
             await update_session_state(session_id, current_user.id, "health", summary)
+            await save_scenario(
+                user_id=current_user.id,
+                feature="health",
+                input_data=profile.model_dump(),
+                result_data=summary,
+                name="Portfolio Run",
+                session_type="portfolio",
+            )
         else:
             await update_session_state(session_id, current_user.id, "health", summary)
             if req.save_scenario:
@@ -140,6 +148,7 @@ async def health_score(
                     input_data=profile.model_dump(),
                     result_data=summary,
                     name=req.scenario_name,
+                    session_type="scenario",
                 )
 
         return HealthScoreResponse(

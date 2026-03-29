@@ -183,9 +183,11 @@ export function FIREPage() {
   const [form, setForm] = useState<FIREFormState>(DEFAULT_FIRE_FORM);
   const [error, setError] = useState("");
   const [result, setResult] = useState<FIREApiResponse | null>(null);
+  const [isPortfolioRun, setIsPortfolioRun] = useState(false);
 
   async function handleGateChoice(choice: ScenarioChoice) {
     if (choice === "portfolio") {
+      setIsPortfolioRun(true);
       try {
         const portfolio = await getPortfolio();
         if (!isProfileEmpty(portfolio)) {
@@ -224,9 +226,9 @@ export function FIREPage() {
     setPhase("loading");
     try {
       const payload = buildPayload(form);
-      const res = await getFIREPlan(payload);
+      const res = await getFIREPlan(payload, isPortfolioRun);
       setResult(res);
-      storeToolSession("fire", res.session_id);
+      storeToolSession("fire", res.session_id, isPortfolioRun ? "portfolio" : "scenario");
       setPhase("result");
     } catch (err) {
       setError(
@@ -240,6 +242,7 @@ export function FIREPage() {
     setResult(null);
     setForm(DEFAULT_FIRE_FORM);
     setStep(1);
+    setIsPortfolioRun(false);
     setError("");
     setPhase("gate");
   }

@@ -335,7 +335,7 @@ export function ScenarioHistoryTab() {
     setLoading(true);
     setError("");
     try {
-      const data = await listScenarios();
+      const data = await listScenarios(undefined, "scenario");
       setScenarios(
         [...data].sort((a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

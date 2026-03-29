@@ -87,6 +87,7 @@ class ScenarioSummary(BaseModel):
     id: str
     name: str
     feature: str
+    session_type: str = "scenario"
     created_at: str
     result: dict
 
@@ -97,6 +98,7 @@ class ScenarioDetailResponse(BaseModel):
     id: str
     name: str
     feature: str
+    session_type: str = "scenario"
     created_at: str
     input_data: dict
     result: dict

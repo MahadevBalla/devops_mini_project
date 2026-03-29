@@ -79,14 +79,16 @@ async def update_profile(
 )
 async def get_scenarios(
     feature: str | None = None,
+    session_type: str | None = None,
     current_user: User = Depends(get_current_user),
 ) -> list[ScenarioSummary]:
     """
     List all saved what-if scenarios for the logged-in user.
     Optionally filter by feature: fire | health | tax | mf | couple | life_event
+    Optionally filter by session_type: portfolio | scenario
     Returns summary view only (no input_data).
     """
-    scenarios = await list_scenarios(current_user.id, feature)
+    scenarios = await list_scenarios(current_user.id, feature, session_type)
     return [ScenarioSummary(**s) for s in scenarios]
 
 

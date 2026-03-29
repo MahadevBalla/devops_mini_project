@@ -103,6 +103,7 @@ export interface ScenarioSummary {
   id: string;
   name: string;
   feature: string;
+  session_type: "portfolio" | "scenario";
   created_at: string;
   result: Record<string, unknown>;
 }
@@ -175,8 +176,12 @@ export async function updatePortfolioProfile(profile: UserProfile): Promise<Port
   );
 }
 
-export async function listScenarios(feature?: string): Promise<ScenarioSummary[]> {
-  const query = feature ? `?feature=${feature}` : "";
+export async function listScenarios(feature?: string, sessionType?: "portfolio" | "scenario"): Promise<ScenarioSummary[]> {
+  const queryParams = new URLSearchParams();
+  if (feature) queryParams.append("feature", feature);
+  if (sessionType) queryParams.append("session_type", sessionType);
+  const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
+  
   return authService.authenticatedRequest(() =>
     api.get<ScenarioSummary[]>(`/api/portfolio/scenarios${query}`, authHeaders())
   );

@@ -240,9 +240,11 @@ export function TaxPage() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<TaxApiResponse | null>(null);
   const [btnState, setBtnState] = useState<BtnState>("idle");
+  const [isPortfolioRun, setIsPortfolioRun] = useState(false);
 
   async function handleGateChoice(choice: ScenarioChoice) {
     if (choice === "portfolio") {
+      setIsPortfolioRun(true);
       try {
         const portfolio = await getPortfolio();
         if (!isProfileEmpty(portfolio)) {
@@ -290,9 +292,9 @@ export function TaxPage() {
           }
           : form
       );
-      const res = await getTaxAnalysis(payload);
+      const res = await getTaxAnalysis(payload, isPortfolioRun);
       setResult(res);
-      storeToolSession("tax", res.session_id);
+      storeToolSession("tax", res.session_id, isPortfolioRun ? "portfolio" : "scenario");
       // Button state: saved (with savings amount)
       setBtnState("saved");
       setPhase("result");
@@ -307,6 +309,7 @@ export function TaxPage() {
     setResult(null);
     setForm(DEFAULT_TAX_FORM);
     setStep(1);
+    setIsPortfolioRun(false);
     setError("");
     setBtnState("idle");
     setPhase("gate");

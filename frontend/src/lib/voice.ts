@@ -179,7 +179,7 @@ export function startRecording(
       },
       getAmplitude: () => {
         if (!analyser || !dataArray) return 0;
-        analyser.getByteFrequencyData(dataArray);
+        analyser.getByteFrequencyData(dataArray as any);
         const sum = dataArray.reduce((a, b) => a + b, 0);
         return sum / dataArray.length / 255; // normalise to 0–1
       },

@@ -138,7 +138,14 @@ async def fire_planner(
             # Portfolio run — update portfolio and session state with results
             await update_portfolio_result(current_user.id, "fire", summary)
             await update_session_state(session_id, current_user.id, "fire", summary)
-
+            await save_scenario(
+                user_id=current_user.id,
+                feature="fire",
+                input_data=profile.model_dump(),
+                result_data=summary,
+                name="Portfolio Run",
+                session_type="portfolio",
+            )
         else:
             # What-if run — only update session state, optionally save scenario, portfolio untouched
             await update_session_state(session_id, current_user.id, "fire", summary)
@@ -150,6 +157,7 @@ async def fire_planner(
                     input_data=profile.model_dump(),
                     result_data=summary,
                     name=req.scenario_name,
+                    session_type="scenario",
                 )
 
         return FIREPlanResponse(

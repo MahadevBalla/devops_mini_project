@@ -191,6 +191,14 @@ class Scenario(Base):
     )
     name = Column(String(128), nullable=True)
     feature = Column(String(32), nullable=False, index=True)
+
+    session_type = Column(
+        String(16),
+        nullable=False,
+        default="scenario",      # safe default for existing rows
+        index=True,
+    )
+
     input_json = Column(Text, default="{}")
     result_json = Column(Text, default="{}")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -512,12 +520,14 @@ async def save_scenario(
     input_data: dict,
     result_data: dict,
     name: Optional[str] = None,
+    session_type: str = "scenario",
 ) -> str:
     """Persist a what-if scenario. Returns the new scenario id."""
     scenario = Scenario(
         user_id=user_id,
         feature=feature,
         name=name,
+        session_type=session_type,
         input_json=json.dumps(input_data),
         result_json=json.dumps(result_data),
     )
@@ -528,12 +538,14 @@ async def save_scenario(
     return scenario.id
 
 
-async def list_scenarios(user_id: str, feature: Optional[str] = None) -> list[dict]:
+async def list_scenarios(user_id: str, feature: Optional[str] = None, session_type: Optional[str] = None) -> list[dict]:
     """List saved scenarios for a user, newest first. Summary view only (no input_data)."""
     async with AsyncSessionLocal() as db:
         q = select(Scenario).where(Scenario.user_id == user_id)
         if feature:
             q = q.where(Scenario.feature == feature)
+        if session_type:
+            q = q.where(Scenario.session_type == session_type)
         q = q.order_by(Scenario.created_at.desc())
         result = await db.execute(q)
         scenarios = result.scalars().all()
@@ -542,6 +554,7 @@ async def list_scenarios(user_id: str, feature: Optional[str] = None) -> list[di
             "id": s.id,
             "name": s.name or f"{s.feature} run",
             "feature": s.feature,
+            "session_type": s.session_type,
             "created_at": s.created_at.isoformat(),
             "result": _safe_json(s.result_json),
         }
@@ -565,6 +578,7 @@ async def get_scenario_by_id(scenario_id: str, user_id: str) -> Optional[dict]:
         "id": s.id,
         "name": s.name or f"{s.feature} run",
         "feature": s.feature,
+        "session_type": s.session_type,
         "created_at": s.created_at.isoformat(),
         "input_data": _safe_json(s.input_json),
         "result": _safe_json(s.result_json),

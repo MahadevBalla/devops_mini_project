@@ -129,9 +129,11 @@ export function CouplePlannerPage() {
   const [form, setForm] = useState<CoupleFormState>(DEFAULT_COUPLE_FORM);
   const [error, setError] = useState("");
   const [result, setResult] = useState<CoupleApiResponse | null>(null);
+  const [isPortfolioRun, setIsPortfolioRun] = useState(false);
 
   async function handleGateChoice(choice: ScenarioChoice) {
     if (choice === "portfolio") {
+      setIsPortfolioRun(true);
       try {
         const portfolio = await getPortfolio();
         if (!isProfileEmpty(portfolio)) {
@@ -173,9 +175,9 @@ export function CouplePlannerPage() {
     setError("");
     try {
       const payload = buildCouplePayload(form);
-      const res = await getCouplePlan(payload);
+      const res = await getCouplePlan(payload, isPortfolioRun);
       setResult(res as unknown as CoupleApiResponse);
-      storeToolSession("couple", res.session_id);
+      storeToolSession("couple", res.session_id, isPortfolioRun ? "portfolio" : "scenario");
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -187,6 +189,7 @@ export function CouplePlannerPage() {
     setResult(null);
     setForm(DEFAULT_COUPLE_FORM);
     setStep(1);
+    setIsPortfolioRun(false);
     setError("");
     setPhase("gate");
   }
@@ -255,8 +258,6 @@ export function CouplePlannerPage() {
                 "Generating personalised joint advice...",
               ]}
               stageDelays={[1000, 2000, 3000]}
-              icon = {Heart}
-              iconStatic
               title={`Optimising ${nameA} & ${nameB}'s finances`}
               subtitle="HRA · NPS · SIP · Tax · Insurance"
             />

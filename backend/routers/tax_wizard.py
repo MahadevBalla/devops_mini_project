@@ -134,6 +134,14 @@ async def tax_wizard(
         if req.use_profile:
             await update_portfolio_result(current_user.id, "tax", summary)
             await update_session_state(session_id, current_user.id, "tax", summary)
+            await save_scenario(
+                user_id=current_user.id,
+                feature="tax",
+                input_data=profile.model_dump(),
+                result_data=summary,
+                name="Portfolio Run",
+                session_type="portfolio",
+            )
         else:
             await update_session_state(session_id, current_user.id, "tax", summary)
             if req.save_scenario:
@@ -143,6 +151,7 @@ async def tax_wizard(
                     input_data=profile.model_dump(),
                     result_data=summary,
                     name=req.scenario_name,
+                    session_type="scenario",
                 )
 
         return TaxWizardResponse(

@@ -55,12 +55,10 @@ export interface HealthScoreResponse {
   decision_log: unknown[];
 }
 
-export async function getHealthScore(data: HealthScorePayload): Promise<HealthScoreApiResponse> {
+export async function getHealthScore(data: HealthScorePayload, useProfile: boolean = false): Promise<HealthScoreApiResponse> {
   return authedPost<HealthScoreApiResponse>("/api/health-score", {
-    profile: data,
-    use_profile: false,
-    save_scenario: true,                          // ← add this
-    scenario_name: `Health Score – ${new Date().toLocaleDateString("en-IN")}`,
+    ...(useProfile ? {} : { profile: data, save_scenario: true, scenario_name: `Health Score – ${new Date().toLocaleDateString("en-IN")}` }),
+    use_profile: useProfile,
   });
 }
 
@@ -98,12 +96,10 @@ export interface FIREResponse {
   decision_log: unknown[];
 }
 
-export async function getFIREPlan(data: FIREPayload): Promise<FIREApiResponse> {
+export async function getFIREPlan(data: FIREPayload, useProfile: boolean = false): Promise<FIREApiResponse> {
   return authedPost<FIREApiResponse>("/api/fire-planner", {
-    profile: data,
-    use_profile: false,
-    save_scenario: true,                          // ← add this
-    scenario_name: `FIRE Plan – ${new Date().toLocaleDateString("en-IN")}`,
+    ...(useProfile ? {} : { profile: data, save_scenario: true, scenario_name: `FIRE Plan – ${new Date().toLocaleDateString("en-IN")}` }),
+    use_profile: useProfile,
   });
 }
 // ─── Tax Wizard ───────────────────────────────────────────────────────────────
@@ -128,12 +124,10 @@ export interface TaxResponse {
   decision_log: unknown[];
 }
 
-export async function getTaxAnalysis(data: TaxPayload): Promise<TaxApiResponse> {
+export async function getTaxAnalysis(data: TaxPayload, useProfile: boolean = false): Promise<TaxApiResponse> {
   return authedPost<TaxApiResponse>("/api/tax-wizard", {
-    profile: data,
-    use_profile: false,
-    save_scenario: true,                          // ← add this
-    scenario_name: `Tax Analysis – ${new Date().toLocaleDateString("en-IN")}`,
+    ...(useProfile ? {} : { profile: data, save_scenario: true, scenario_name: `Tax Analysis – ${new Date().toLocaleDateString("en-IN")}` }),
+    use_profile: useProfile,
   });
 }
 
@@ -163,11 +157,10 @@ export interface LifeEventResponse {
   decision_log: unknown[];
 }
 
-export async function getLifeEventPlan(data: Record<string, unknown>): Promise<LifeEventResponse> {
+export async function getLifeEventPlan(data: Record<string, unknown>, useProfile: boolean = false): Promise<LifeEventResponse> {
   return authedPost<LifeEventResponse>("/api/life-event", {
-    ...data,
-    save_scenario: true,                          // ← add this
-    scenario_name: `Life Event – ${new Date().toLocaleDateString("en-IN")}`,
+    ...(useProfile ? { ...data } : { ...data, save_scenario: true, scenario_name: `Life Event – ${new Date().toLocaleDateString("en-IN")}` }),
+    use_profile: useProfile,
   });
 }
 
@@ -193,11 +186,10 @@ export interface CouplePlanResponse {
   decision_log: unknown[];
 }
 
-export async function getCouplePlan(data: Record<string, unknown>): Promise<CouplePlanResponse> {
+export async function getCouplePlan(data: Record<string, unknown>, useProfile: boolean = false): Promise<CouplePlanResponse> {
   return authedPost<CouplePlanResponse>("/api/couple-planner", {
-    ...data,
-    save_scenario: true,                          // ← add this
-    scenario_name: `Couple Plan – ${new Date().toLocaleDateString("en-IN")}`,
+    ...(useProfile ? { ...data } : { ...data, save_scenario: true, scenario_name: `Couple Plan – ${new Date().toLocaleDateString("en-IN")}` }),
+    use_profile: useProfile,
   });
 }
 

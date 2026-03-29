@@ -90,7 +90,7 @@ export function MFXRayPage() {
     try {
       const res = await getMFXray(selectedFile) as unknown as MFXRayApiResponse;
       setResult(res);
-      storeToolSession("mf", res.session_id);
+      storeToolSession("mf", res.session_id, "portfolio");
       setUploadStatus("success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
@@ -181,8 +181,6 @@ export function MFXRayPage() {
                 "Generating AI insights...",
               ]}
               stageDelays={[1200, 2400, 3600, 4800]}
-              icon={Microscope}
-              iconStatic
               title="Analysing your portfolio"
               subtitle={selectedFile?.name ?? "statement"}
               footerNote="Takes 5–15 seconds"

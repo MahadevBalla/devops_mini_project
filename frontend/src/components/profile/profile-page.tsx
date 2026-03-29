@@ -28,6 +28,7 @@ import { Tabs } from "@/components/ui/vercel-tabs";
 import { PortfolioSummary } from "./portfolio-summary";
 import { PortfolioWizard } from "./portfolio-wizard";
 import { ScenarioHistoryTab } from "./scenario-history-tab";
+import { PortfolioAnalysisTab } from "./portfolio-analysis-tab";
 
 export function ProfilePage() {
   const router = useRouter();
@@ -113,8 +114,9 @@ export function ProfilePage() {
 
   const tabs = [
     { id: "account", label: "Account" },
-    { id: "portfolio", label: "Portfolio" },
-    { id: "history",    label: "History"    },
+    { id: "profile", label: "Financial Profile" },
+    { id: "portfolio", label: "Portfolio Analysis" },
+    { id: "history",    label: "History" },
     { id: "appearance", label: "Appearance" },
   ];
 
@@ -247,7 +249,7 @@ export function ProfilePage() {
             </div>
           )}
 
-          {activeTab === "portfolio" && (
+          {activeTab === "profile" && (
             <div className="space-y-4">
               {portfolio && !showPortfolioWizard && (
                 <div className="bg-background border border-border rounded-xl p-5">
@@ -280,6 +282,10 @@ export function ProfilePage() {
                 </div>
               )}
             </div>
+          )}
+
+          {activeTab === "portfolio" && (
+            <PortfolioAnalysisTab />
           )}
 
           {activeTab === "history" && (

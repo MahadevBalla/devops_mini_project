@@ -123,14 +123,27 @@ async def couple_planner(
             session_id, current_user.id, "couple", couple_summary
         )
 
-        if raw_data.get("save_scenario"):
+        if raw_data.get("use_profile"):
+            from db.session_store import update_portfolio_result
+            await update_portfolio_result(current_user.id, "couple", couple_summary)
             await save_scenario(
                 user_id=current_user.id,
                 feature="couple",
                 input_data={k: v for k, v in raw_data.items()
-                            if k not in ("save_scenario", "scenario_name")},
+                            if k not in ("save_scenario", "scenario_name", "use_profile")},
+                result_data=couple_summary,
+                name="Portfolio Run",
+                session_type="portfolio",
+            )
+        elif raw_data.get("save_scenario"):
+            await save_scenario(
+                user_id=current_user.id,
+                feature="couple",
+                input_data={k: v for k, v in raw_data.items()
+                            if k not in ("save_scenario", "scenario_name", "use_profile")},
                 result_data=couple_summary,
                 name=raw_data.get("scenario_name"),
+                session_type="scenario",
             )
 
         return CoupleResponse(

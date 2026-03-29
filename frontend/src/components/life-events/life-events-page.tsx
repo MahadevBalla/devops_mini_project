@@ -131,9 +131,11 @@ export function LifeEventsPage() {
   const [form, setForm] = useState<LifeEventFormState>(DEFAULT_LIFE_EVENT_FORM);
   const [error, setError] = useState("");
   const [result, setResult] = useState<LifeEventApiResponse | null>(null);
+  const [isPortfolioRun, setIsPortfolioRun] = useState(false);
 
   async function handleGateChoice(choice: ScenarioChoice) {
     if (choice === "portfolio") {
+      setIsPortfolioRun(true);
       try {
         const portfolio = await getPortfolio();
         if (!isProfileEmpty(portfolio)) {
@@ -175,9 +177,9 @@ export function LifeEventsPage() {
     setPhase("loading");
     try {
       const payload = buildLifeEventPayload(form);
-      const res = await getLifeEventPlan(payload as unknown as Record<string, unknown>);
+      const res = await getLifeEventPlan(payload as unknown as Record<string, unknown>, isPortfolioRun);
       setResult(res as unknown as LifeEventApiResponse);
-      storeToolSession("life", res.session_id);
+      storeToolSession("life", res.session_id, isPortfolioRun ? "portfolio" : "scenario");
       setPhase("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
@@ -189,6 +191,7 @@ export function LifeEventsPage() {
     setResult(null);
     setForm(DEFAULT_LIFE_EVENT_FORM);
     setStep(1);
+    setIsPortfolioRun(false);
     setError("");
     setPhase("gate");
   }
@@ -277,8 +280,6 @@ export function LifeEventsPage() {
                 "Generating personalised AI advice...",
               ]}
               stageDelays={[1100, 2200, 3300]}
-              icon={meta?.icon ?? Loader2}
-              iconStatic={!!meta?.icon}
             />
           </div>
         )}
