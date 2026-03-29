@@ -193,8 +193,9 @@
   --gradient-card: linear-gradient(145deg, oklch(0.124 0.017 255), oklch(0.155 0.015 255));
   --gradient-hero: radial-gradient(ellipse 90% 60% at 50% -5%, oklch(0.68 0.22 168 / 0.16) 0%, transparent 70%);
   --gradient-shine: linear-gradient(108deg, transparent 40%, oklch(1 0 0 / 0.04) 50%, transparent 60%);
-  --gradient-mesh: radial-gradient(at 20% 30%, oklch(0.68 0.22 168 / 0.10) 0px, transparent 50%),
-    radial-gradient(at 80% 70%, oklch(0.72 0.18 198 / 0.08) 0px, transparent 50%);
+  --gradient-mesh:
+      radial-gradient(at 15% 20%, oklch(0.68 0.22 168 / 0.22) 0%, transparent 70%),
+      radial-gradient(at 85% 80%, oklch(0.72 0.18 198 / 0.16) 0%, transparent 70%);
 
   /* ── Shadows ────────────────────────────────────────────────────────────*/
   --shadow-xs: 0 1px 2px oklch(0 0 0 / 0.20);

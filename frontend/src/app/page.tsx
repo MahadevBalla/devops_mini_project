@@ -127,7 +127,7 @@ function FeatureCardWide({
       className,
     )}>
       {/* Subtle mesh ambient inside card */}
-      <div className="absolute inset-0 bg-mesh opacity-60 pointer-events-none" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "var(--gradient-mesh)", opacity: 1, }}/>
       {/* Dot grid texture */}
       <div className="absolute inset-0 dot-grid opacity-30 pointer-events-none" />
       {/* shimmer-brand on hover */}
