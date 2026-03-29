@@ -55,7 +55,7 @@ export function ChatInputBar({ onSend, onStop, isStreaming, disabled }: Props) {
   const canSend = text.trim().length > 0 && !disabled && !isStreaming;
 
   return (
-    <div className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm px-4 pt-3 pb-4">
+    <div className="shrink-0 px-4 pt-3 pb-2">
       <div
         className={cn(
           "flex items-end gap-2 rounded-2xl border bg-card px-4 py-3",
@@ -142,32 +142,6 @@ export function ChatInputBar({ onSend, onStop, isStreaming, disabled }: Props) {
           )}
         </div>
       </div>
-
-      <p className="text-[11px] text-muted-foreground/60 text-center mt-2 select-none">
-        {isStreaming ? (
-          <>
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[10px] font-mono">
-              Enter
-            </kbd>
-            {" "}or click{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[10px] font-mono">
-              Stop
-            </kbd>
-            {" "}to cancel generation
-          </>
-        ) : (
-          <>
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[10px] font-mono">
-              Enter
-            </kbd>
-            {" "}to send ·{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[10px] font-mono">
-              Shift + Enter
-            </kbd>
-            {" "}for new line
-          </>
-        )}
-      </p>
     </div>
   );
 }

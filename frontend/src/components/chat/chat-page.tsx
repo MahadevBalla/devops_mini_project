@@ -25,27 +25,19 @@ export function ChatPage() {
   const [sessionReady, setSessionReady] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
 
-  // AbortController to cancel the active SSE stream
   const abortRef = useRef<AbortController | null>(null);
-  // Track which message bubble is currently receiving tokens
   const streamingIdRef = useRef<string | null>(null);
 
   // ── Bootstrap session ──────────────────────────────────────────────────────
   useEffect(() => {
     getOrCreateChatSession()
-      .then((id) => {
-        setSessionId(id);
-        setSessionReady(true);
-      })
-      .catch(() => {
-        toast.error("Could not start your chat session. Please refresh.");
-      });
+      .then((id) => { setSessionId(id); setSessionReady(true); })
+      .catch(() => toast.error("Could not start your chat session. Please refresh."));
   }, []);
 
   // ── Stop active stream ─────────────────────────────────────────────────────
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
-    // Finalise the streaming bubble — remove cursor, keep whatever was received
     setMessages((prev) =>
       prev.map((m) =>
         m.id === streamingIdRef.current
@@ -63,7 +55,7 @@ export function ChatPage() {
     (text: string) => {
       if (!sessionId || isStreaming || !text.trim()) return;
 
-      const userMsg  = makeUserMessage(text.trim());
+      const userMsg = makeUserMessage(text.trim());
       const assistantMsg = makeAssistantStreamingMessage();
       streamingIdRef.current = assistantMsg.id;
 
@@ -71,23 +63,18 @@ export function ChatPage() {
       setIsStreaming(true);
 
       const abort = streamChatMessage(sessionId, text.trim(), {
-
-        // Called for every arriving token from backend
         onToken: (token) => {
           setMessages((prev) =>
-            prev.map((m) => {
-              if (m.id !== assistantMsg.id) return m;
-              return {
+            prev.map((m) =>
+              m.id !== assistantMsg.id ? m : {
                 ...m,
                 content: m.content + token,
-                isLoading: false,   // first token → hide dots
-                isStreaming: true,  // show blinking cursor
-              };
-            })
+                isLoading: false,
+                isStreaming: true,
+              }
+            )
           );
         },
-
-        // Called when backend sends {done: true}
         onDone: () => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -100,15 +87,11 @@ export function ChatPage() {
           abortRef.current = null;
           streamingIdRef.current = null;
         },
-
-        // Called on any non-abort error
         onError: (err) => {
           const msg = err.message;
-
           if (msg === "SESSION_NOT_FOUND") {
             clearChatSession();
             toast.warning("Session expired — starting fresh.");
-            // Remove the empty assistant bubble and reset session
             setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
             getOrCreateChatSession().then((id) => {
               setSessionId(id);
@@ -118,23 +101,15 @@ export function ChatPage() {
             toast.error("Signed out — please sign in again.");
             setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
           } else {
-            // Show error state in the bubble itself
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMsg.id
-                  ? {
-                      ...m,
-                      content: "Something went wrong. Please try again.",
-                      isLoading: false,
-                      isStreaming: false,
-                      isError: true,
-                    }
+                  ? { ...m, content: "Something went wrong. Please try again.", isLoading: false, isStreaming: false, isError: true }
                   : m
               )
             );
             toast.error("Stream interrupted. Please try again.");
           }
-
           setIsStreaming(false);
           abortRef.current = null;
           streamingIdRef.current = null;
@@ -148,50 +123,42 @@ export function ChatPage() {
 
   // ── Clear chat ─────────────────────────────────────────────────────────────
   const handleClear = useCallback(() => {
-    abortRef.current?.abort(); // cancel any active stream first
+    abortRef.current?.abort();
     setMessages([]);
     clearChatSession();
     setSessionReady(false);
     setIsStreaming(false);
     getOrCreateChatSession()
-      .then((id) => {
-        setSessionId(id);
-        setSessionReady(true);
-        toast.success("Chat cleared — fresh session started.");
-      })
+      .then((id) => { setSessionId(id); setSessionReady(true); toast.success("Chat cleared — fresh session started."); })
       .catch(() => toast.error("Could not reset session."));
   }, []);
 
   return (
-    <AppShell>
-      {/* Break out of AppShell's max-w-5xl/py-8 padding for full-height chat */}
-      <div className="-mx-4 sm:-mx-6 -my-8 flex flex-col h-[calc(100vh-4rem)]">
+    // AppShell still renders the sidebar — we just override its inner content area
+    <AppShell noPadding>
+      {/*
+        Full-height chat column that fills whatever space AppShell gives us.
+        AppShell must pass `noPadding` to remove its max-w / py-8 wrapper.
+        If AppShell doesn't support noPadding yet, see note below.
+      */}
+      <div className="flex flex-col w-full relative" style={{ height: "100%" }}>
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-background/80 backdrop-blur-md">
+        {/* ── Header ────────────────────────────────────────────────────── */}
+        <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border bg-background/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold leading-tight">
-                Money Mentor
-              </span>
-
-              {/* Status indicator — 3 states: Connecting / Responding / Ready */}
+              <span className="text-sm font-semibold leading-tight">Money Mentor</span>
               <span className="text-[11px] leading-tight text-muted-foreground">
                 {!sessionReady ? (
                   <span className="flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Connecting…
+                    <Loader2 className="h-3 w-3 animate-spin" /> Connecting…
                   </span>
                 ) : isStreaming ? (
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex items-center gap-1 text-primary"
-                  >
-                    {/* Pulsing dot — signals live data arriving */}
+                  <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex items-center gap-1 text-primary">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
@@ -199,12 +166,8 @@ export function ChatPage() {
                     Responding…
                   </motion.span>
                 ) : (
-                  <motion.span
-                    key="ready"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex items-center gap-1"
-                  >
+                  <motion.span key="ready" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />
                     Ready
                   </motion.span>
@@ -214,59 +177,58 @@ export function ChatPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Stop button — only during active stream */}
             {isStreaming && (
               <motion.button
-                initial={{ opacity: 0, scale: 0.85 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.85 }}
+                initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
                 onClick={handleStop}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium",
-                  "text-destructive border border-destructive/30",
-                  "hover:bg-destructive/10 transition-colors"
-                )}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-destructive border border-destructive/30 hover:bg-destructive/10 transition-colors"
               >
-                <StopCircle className="h-3.5 w-3.5" />
-                Stop
+                <StopCircle className="h-3.5 w-3.5" /> Stop
               </motion.button>
             )}
-
-            {/* Clear button — only when messages exist AND not mid-stream */}
             {messages.length > 0 && !isStreaming && (
               <motion.button
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                 onClick={handleClear}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Clear chat and start fresh"
               >
-                <Trash2 className="h-3.5 w-3.5" />
-                Clear
+                <Trash2 className="h-3.5 w-3.5" /> Clear
               </motion.button>
             )}
           </div>
         </div>
 
-        {/* ── Message area ────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-hidden relative">
-          {messages.length === 0 ? (
-            <SuggestionChips
-              onSelect={handleSend}
-              disabled={!sessionReady || isStreaming}
-            />
-          ) : (
-            <MessageList messages={messages} />
-          )}
+        {/* ── Message area — scrollable, padded so content clears floating input ── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="w-full max-w-3xl mx-auto pb-36 pt-2">
+            {messages.length === 0 ? (
+              <SuggestionChips
+                onSelect={handleSend}
+                disabled={!sessionReady || isStreaming}
+              />
+            ) : (
+              <MessageList messages={messages} />
+            )}
+          </div>
         </div>
 
-        {/* ── Input bar ───────────────────────────────────────────────────── */}
-        <ChatInputBar
-          onSend={handleSend}
-          onStop={handleStop}
-          isStreaming={isStreaming}
-          disabled={!sessionReady}
-        />
+        {/* ── Floating input bar — fixed to bottom, centred, frosted glass ── */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
+          <div className="max-w-3xl mx-auto px-3 pb-3 pointer-events-auto">
+            {/* Gradient fade above input so messages don't hard-cut */}
+            <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+            <div className="relative rounded-2xl shadow-2xl shadow-black/20 ring-1 ring-border/50 bg-background/95 backdrop-blur-xl overflow-hidden">
+              <ChatInputBar
+                onSend={handleSend}
+                onStop={handleStop}
+                isStreaming={isStreaming}
+                disabled={!sessionReady}
+              />
+            </div>
+          </div>
+        </div>
+
       </div>
     </AppShell>
   );

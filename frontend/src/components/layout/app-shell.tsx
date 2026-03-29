@@ -44,9 +44,12 @@ const navGroups = [
   },
 ];
 
-interface AppShellProps { children: React.ReactNode }
+interface AppShellProps {
+  children: React.ReactNode;
+  noPadding?: boolean;
+}
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, noPadding }: AppShellProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -278,12 +281,16 @@ export function AppShell({ children }: AppShellProps) {
           </Link>
         </header>
 
-        <main className="flex-1 overflow-y-auto" data-lenis-prevent>
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-            <PageTransition>
-              {children}
-            </PageTransition>
-          </div>
+        <main className="flex-1 overflow-hidden flex flex-col" data-lenis-prevent>
+          {noPadding ? (
+            <PageTransition className="h-full flex flex-col flex-1">{children}</PageTransition>
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+                <PageTransition>{children}</PageTransition>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 

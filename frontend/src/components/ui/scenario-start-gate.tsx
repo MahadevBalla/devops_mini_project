@@ -162,7 +162,7 @@ export function ScenarioStartGate({
       {heroProps && <ToolHero {...heroProps} />}
 
       <div className="text-center space-y-1">
-        <h2 className="text-base font-semibold">How do you want to start?</h2>
+        <h2 className="text-base font-semibold p-5">How do you want to start?</h2>
         <p className="text-xs text-muted-foreground">
           Pre-fill from your saved portfolio, or try a fresh what-if scenario
         </p>

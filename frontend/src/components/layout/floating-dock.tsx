@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Mic, X, Send, Loader2 } from "lucide-react";
 import {
@@ -30,6 +31,7 @@ const CHUNK_SIZE = 3;
 // ─── Floating Dock ────────────────────────────────────────────────────────────
 
 export function FloatingDock() {
+    const pathname = usePathname();
     const [chatOpen, setChatOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
@@ -47,6 +49,9 @@ export function FloatingDock() {
     }, [chatOpen]);
 
     useEffect(() => () => abortRef.current?.abort(), []);
+
+    // ─── Hide on /chat page ───────────────────────────────────────────────────
+    if (pathname === "/chat" || pathname.startsWith("/chat/")) return null;
 
     // ─── Send ──────────────────────────────────────────────────────────────────
 
