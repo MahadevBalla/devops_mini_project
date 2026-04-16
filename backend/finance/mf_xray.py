@@ -14,7 +14,7 @@ import csv
 import io
 import logging
 import re
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 import numpy_financial as npf
@@ -90,6 +90,12 @@ def compute_xirr(cash_flows: list[tuple[date, float]]) -> Optional[float]:
     except Exception:
         return None
 
+def _synthesize_cash_flows(holdings: list[MFHolding]) -> list[tuple[date, float]]:
+    """Approximate cash flows when no transaction history is available."""
+    fallback = date.today() - timedelta(days=365)
+    flows = [(fallback, -h.invested_amount) for h in holdings]
+    flows.append((date.today(), sum(h.current_value for h in holdings)))
+    return sorted(flows, key=lambda x: x[0])
 
 # NAV enrichment helper
 def _enrich(isin: str, scheme_name: str, units: float, avg_nav: float) -> dict:
@@ -391,7 +397,7 @@ def analyse_portfolio(
         (total_current - total_invested) / total_invested * 100 if total_invested > 0 else 0.0
     )
 
-    overall_xirr = compute_xirr(cash_flows) if cash_flows else None
+    overall_xirr = compute_xirr(cash_flows if cash_flows else _synthesize_cash_flows(holdings))
     overall_xirr_pct = round(overall_xirr * 100, 2) if overall_xirr is not None else None
 
     overlap_pairs = detect_overlap(holdings)
