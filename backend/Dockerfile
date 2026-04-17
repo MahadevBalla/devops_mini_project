@@ -8,13 +8,6 @@ WORKDIR /app
 # Copy uv as a static binary
 COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /uvx /bin/
 
-# System deps needed to compile some packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
 # uv env vars
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
