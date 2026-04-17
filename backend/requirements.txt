@@ -22,3 +22,5 @@ huggingface-hub>=1.11.0
 
 passlib[bcrypt]>=1.7.4
 pyjwt>=2.12.1
+
+prometheus-fastapi-instrumentator>=7.1.0

@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from core.config import settings
 from core.exceptions import MoneyMentorError
@@ -82,6 +83,9 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
 )
+
+# Prometheus — exposes /metrics for Prometheus scraping
+Instrumentator().instrument(app).expose(app)
 
 # CORS
 app.add_middleware(
