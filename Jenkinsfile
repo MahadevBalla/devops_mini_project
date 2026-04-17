@@ -102,6 +102,8 @@ pipeline {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
+                        export DOCKER_BUILDKIT=1
+
                         docker build --no-cache -t ${BACKEND_IMAGE}:latest  -t ${BACKEND_IMAGE}:${BUILD_NUMBER}  ./backend
                         docker build --no-cache -t ${FRONTEND_IMAGE}:latest -t ${FRONTEND_IMAGE}:${BUILD_NUMBER} ./frontend
 
