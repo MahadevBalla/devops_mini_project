@@ -1,0 +1,199 @@
+---
+- name: Full Money Mentor EC2 Setup
+  hosts: ec2
+  become: yes
+
+  vars:
+    app_dir: /home/ubuntu/app
+    ubuntu_user: ubuntu
+
+  pre_tasks:
+    - name: Install community.docker Ansible collection (runs on control node)
+      command: ansible-galaxy collection install community.docker --ignore-errors
+      delegate_to: localhost
+      run_once: true
+      become: no
+
+  tasks:
+
+    # System baseline
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose-plugin
+          - git
+          - curl
+          - htop
+          - unzip
+          - python3-pip
+        state: present
+
+    - name: Add ubuntu to docker group
+      user:
+        name: "{{ ubuntu_user }}"
+        groups: docker
+        append: yes
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # 2 GB swap memory for SonarQube and general stability
+    - name: Check if swap file exists
+      stat:
+        path: /swapfile
+      register: swapfile_stat
+
+    - name: Create 2 GB swap file
+      command: fallocate -l 2G /swapfile
+      when: not swapfile_stat.stat.exists
+
+    - name: Set swap permissions
+      file:
+        path: /swapfile
+        mode: '0600'
+      when: not swapfile_stat.stat.exists
+
+    - name: Format swap
+      command: mkswap /swapfile
+      when: not swapfile_stat.stat.exists
+
+    - name: Enable swap
+      command: swapon /swapfile
+      when: not swapfile_stat.stat.exists
+
+    - name: Persist swap across reboots
+      lineinfile:
+        path: /etc/fstab
+        line: '/swapfile none swap sw 0 0'
+        state: present
+
+    - name: Set swappiness to 10
+      sysctl:
+        name: vm.swappiness
+        value: '10'
+        state: present
+        reload: yes
+
+    # SonarQube kernel requirement
+    - name: Set vm.max_map_count for SonarQube
+      sysctl:
+        name: vm.max_map_count
+        value: '262144'
+        state: present
+        reload: yes
+
+    # Docker daemon config
+    - name: Configure Docker log rotation
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": { "max-size": "10m", "max-file": "3" }
+          }
+      notify: Restart Docker
+
+    # App directory structure
+    - name: Create app directory tree
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ubuntu_user }}"
+        group: "{{ ubuntu_user }}"
+        mode: '0755'
+      loop:
+        - "{{ app_dir }}"
+        - "{{ app_dir }}/monitoring"
+        - "{{ app_dir }}/monitoring/grafana"
+
+    # Copy configs from control node
+    - name: Copy docker-compose.prod.yml to EC2
+      copy:
+        src: ../docker-compose.prod.yml
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: "{{ ubuntu_user }}"
+        mode: '0644'
+
+    - name: Copy Prometheus config
+      copy:
+        src: ../monitoring/prometheus.yml
+        dest: "{{ app_dir }}/monitoring/prometheus.yml"
+        owner: "{{ ubuntu_user }}"
+        mode: '0644'
+
+    - name: Copy Grafana datasources config
+      copy:
+        src: ../monitoring/grafana/datasources.yml
+        dest: "{{ app_dir }}/monitoring/grafana/datasources.yml"
+        owner: "{{ ubuntu_user }}"
+        mode: '0644'
+
+    # Jenkins
+    - name: Create Jenkins named volume
+      community.docker.docker_volume:
+        name: jenkins_home
+
+    - name: Run Jenkins container
+      community.docker.docker_container:
+        name: jenkins
+        image: jenkins/jenkins:lts-jdk17
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "8080:8080"
+          - "50000:50000"
+        volumes:
+          - jenkins_home:/var/jenkins_home
+          - /var/run/docker.sock:/var/run/docker.sock
+        env:
+          JAVA_OPTS: "-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
+
+    - name: Install Docker CLI inside Jenkins container
+      community.docker.docker_container_exec:
+        container: jenkins
+        command: >
+          bash -c "
+          apt-get update -qq &&
+          apt-get install -y --no-install-recommends docker.io &&
+          usermod -aG docker jenkins
+          "
+        user: root
+      ignore_errors: yes
+
+    # SonarQube
+    - name: Run SonarQube container
+      community.docker.docker_container:
+        name: sonarqube
+        image: sonarqube:community
+        state: started
+        restart_policy: unless-stopped
+        ports:
+          - "9000:9000"
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+
+    # Print access URLs
+    - name: Display service URLs
+      debug:
+        msg:
+          - "Jenkins:    http://{{ ansible_host }}:8080"
+          - "SonarQube:  http://{{ ansible_host }}:9000"
+          - "Backend:    http://{{ ansible_host }}:8000"
+          - "Frontend:   http://{{ ansible_host }}:3000"
+          - "Prometheus: http://{{ ansible_host }}:9090"
+          - "Grafana:    http://{{ ansible_host }}:3001"
+
+  handlers:
+    - name: Restart Docker
+      systemd:
+        name: docker
+        state: restarted
