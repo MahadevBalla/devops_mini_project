@@ -58,7 +58,7 @@ pipeline {
                 dir('backend') {
                     sh '''
                         export PATH="$HOME/.local/bin:$PATH"
-                        uv run ruff check . --output-format=text || true
+                        uv run ruff check . --output-format=full || true
                     '''
                 }
             }
