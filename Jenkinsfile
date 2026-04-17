@@ -120,36 +120,13 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                echo '─────────────────── Deploying to EC2 via SSH ───────────────────'
-                withCredentials([
-                    sshUserPrivateKey(
-                        credentialsId: 'ec2-ssh-key',
-                        keyFileVariable: 'SSH_KEY'
-                    ),
-                    string(
-                        credentialsId: 'ec2-host',
-                        variable: 'EC2_HOST'
-                    )
-                ]) {
-                    sh '''
-                        ssh -i $SSH_KEY \
-                            -o StrictHostKeyChecking=no \
-                            ubuntu@${EC2_HOST} "
-                            cd ~/app
-
-                            # Pull latest images from Docker Hub
-                            docker compose pull
-
-                            # Restart containers with zero-downtime rolling update
-                            docker compose up -d --remove-orphans
-
-                            # Clean up old images (keep disk usage in check)
-                            docker image prune -f
-
-                            echo 'Deployment complete'
-                        "
-                    '''
-                }
+                echo '─────────────────── Deploying via docker compose ───────────────────'
+                sh '''
+                    docker compose -f /home/ubuntu/app/docker-compose.yml pull
+                    docker compose -f /home/ubuntu/app/docker-compose.yml up -d --remove-orphans
+                    docker image prune -f
+                    echo "Deployment complete"
+                '''
             }
         }
 
