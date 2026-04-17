@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3-flash-preview"
 
+    # HuggingFace — for RAG embeddings
+    HF_TOKEN: str = ""
+    HF_RAG_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"  # BAAI/bge-small-en-v1.5 (~33MB) | BAAI/bge-base-en-v1.5 (~100MB) | BAAI/bge-large-en-v1.5 (~335MB)
+
     # Sarvam AI — voice
     SARVAM_API_KEY: str = ""
     SARVAM_DEFAULT_VOICE: str = "meera"

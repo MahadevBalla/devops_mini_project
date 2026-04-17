@@ -256,8 +256,10 @@ class TestAnalysePortfolio:
         assert "Expensive Fund" in r.high_expense_funds
         assert "Cheap Fund" not in r.high_expense_funds
 
-    def test_xirr_none_without_cashflows(self):
-        assert analyse_portfolio([make_holding()]).overall_xirr is None
+    def test_xirr_computed_via_synthesis_without_explicit_cashflows(self):
+        result = analyse_portfolio([make_holding()])
+        assert isinstance(result.overall_xirr, float)
+        assert result.overall_xirr > 0
 
     def test_xirr_computed_with_cashflows(self):
         cf = [(date(2022, 1, 1), -100_000), (date(2023, 1, 1), 112_000)]

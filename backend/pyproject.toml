@@ -21,18 +21,8 @@ dependencies = [
     "scipy>=1.17.1",
     "pyjwt>=2.12.1",
     "passlib[bcrypt]>=1.7.4",
-    "torch>=2.11.0",
-    "sentence-transformers>=5.3.0",
-    "faiss-cpu>=1.13.2",
+    "huggingface-hub>=1.11.0",
 ]
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
