@@ -102,19 +102,12 @@ pipeline {
                     sh '''
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
-                        # Build with compose (respects both Dockerfiles)
-                        docker compose build --no-cache
+                        docker build --no-cache -t ${BACKEND_IMAGE}:latest  -t ${BACKEND_IMAGE}:${BUILD_NUMBER}  ./backend
+                        docker build --no-cache -t ${FRONTEND_IMAGE}:latest -t ${FRONTEND_IMAGE}:${BUILD_NUMBER} ./frontend
 
-                        # Tag for Docker Hub
-                        docker tag devops_mini_project-backend  ${BACKEND_IMAGE}:latest
-                        docker tag devops_mini_project-frontend ${FRONTEND_IMAGE}:latest
-                        docker tag devops_mini_project-backend  ${BACKEND_IMAGE}:${BUILD_NUMBER}
-                        docker tag devops_mini_project-frontend ${FRONTEND_IMAGE}:${BUILD_NUMBER}
-
-                        # Push
                         docker push ${BACKEND_IMAGE}:latest
-                        docker push ${FRONTEND_IMAGE}:latest
                         docker push ${BACKEND_IMAGE}:${BUILD_NUMBER}
+                        docker push ${FRONTEND_IMAGE}:latest
                         docker push ${FRONTEND_IMAGE}:${BUILD_NUMBER}
 
                         docker logout
@@ -183,7 +176,7 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed. Check logs above.'
-            sh 'docker compose logs --tail=50 || true'
+            sh 'docker ps -a || true'
         }
         always {
             echo 'Pipeline finished.'
