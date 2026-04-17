@@ -90,12 +90,14 @@ def compute_xirr(cash_flows: list[tuple[date, float]]) -> Optional[float]:
     except Exception:
         return None
 
+
 def _synthesize_cash_flows(holdings: list[MFHolding]) -> list[tuple[date, float]]:
     """Approximate cash flows when no transaction history is available."""
     fallback = date.today() - timedelta(days=365)
     flows = [(fallback, -h.invested_amount) for h in holdings]
     flows.append((date.today(), sum(h.current_value for h in holdings)))
     return sorted(flows, key=lambda x: x[0])
+
 
 # NAV enrichment helper
 def _enrich(isin: str, scheme_name: str, units: float, avg_nav: float) -> dict:

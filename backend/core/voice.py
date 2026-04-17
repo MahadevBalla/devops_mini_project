@@ -41,7 +41,7 @@ async def speech_to_text(
     *,
     language_code: str = "en-IN",
     model: str = "saaras:v3",
-    content_type: str = "audio/webm",   # ← NEW param
+    content_type: str = "audio/webm",  # ← NEW param
 ) -> str:
     """
     Convert audio bytes to text via Sarvam Saaras STT API.
@@ -55,10 +55,10 @@ async def speech_to_text(
     # Sarvam accepts: wav, mp3, ogg, webm, mp4, flac
     mime_to_ext = {
         "audio/webm": "webm",
-        "audio/ogg":  "ogg",
-        "audio/mp4":  "mp4",
+        "audio/ogg": "ogg",
+        "audio/mp4": "mp4",
         "audio/mpeg": "mp3",
-        "audio/wav":  "wav",
+        "audio/wav": "wav",
         "audio/flac": "flac",
     }
     # Strip codec params: "audio/webm;codecs=opus" → "audio/webm"

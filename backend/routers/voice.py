@@ -50,7 +50,7 @@ async def stt(
         transcript = await speech_to_text(
             audio_bytes,
             language_code=language_code,
-            content_type=content_type,   # ← NEW
+            content_type=content_type,  # ← NEW
         )
         return {"transcript": transcript, "language": language_code}
     except Exception as e:

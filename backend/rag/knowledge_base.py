@@ -26,9 +26,7 @@ _MIN_CHUNK_LEN = 80
 _BATCH_SIZE = 32
 
 _chunks: list[str] = []
-_embeddings: Optional[np.ndarray] = (
-    None  # shape: (n_chunks, embedding_dim), L2-normalised
-)
+_embeddings: Optional[np.ndarray] = None  # shape: (n_chunks, embedding_dim), L2-normalised
 _lock = threading.Lock()
 
 
@@ -124,7 +122,8 @@ def build_index() -> None:
         _embeddings = emb
         logger.info(
             "RAG index ready: %d chunks × %d dim (via HF API).",
-            len(_chunks), _embeddings.shape[1],
+            len(_chunks),
+            _embeddings.shape[1],
         )
 
 

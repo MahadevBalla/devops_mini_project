@@ -26,11 +26,11 @@ from db.session_store import (
     Session,
     User,
     append_log,
+    create_session,
     get_session_for_user,
 )
 from models import ChatRequest, ChatResponse
 from rag.knowledge_base import query as rag_query
-from db.session_store import create_session 
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["chat"])

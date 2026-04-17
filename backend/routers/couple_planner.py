@@ -21,8 +21,8 @@ from core.exceptions import MoneyMentorError, ValidationError
 from db.session_store import User, append_log, create_session, save_scenario, update_session_state
 from finance.couple import optimise_couple_finances
 from models.api_responses import CoupleResponse, ErrorResponse
-from models.user import Goal
 from models.couple import CoupleProfile
+from models.user import Goal
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["couple-planner"])
@@ -119,18 +119,20 @@ async def couple_planner(
             "partner_b_sip": result.partner_b_sip,
         }
 
-        await update_session_state(
-            session_id, current_user.id, "couple", couple_summary
-        )
+        await update_session_state(session_id, current_user.id, "couple", couple_summary)
 
         if raw_data.get("use_profile"):
             from db.session_store import update_portfolio_result
+
             await update_portfolio_result(current_user.id, "couple", couple_summary)
             await save_scenario(
                 user_id=current_user.id,
                 feature="couple",
-                input_data={k: v for k, v in raw_data.items()
-                            if k not in ("save_scenario", "scenario_name", "use_profile")},
+                input_data={
+                    k: v
+                    for k, v in raw_data.items()
+                    if k not in ("save_scenario", "scenario_name", "use_profile")
+                },
                 result_data=couple_summary,
                 name="Portfolio Run",
                 session_type="portfolio",
@@ -139,8 +141,11 @@ async def couple_planner(
             await save_scenario(
                 user_id=current_user.id,
                 feature="couple",
-                input_data={k: v for k, v in raw_data.items()
-                            if k not in ("save_scenario", "scenario_name", "use_profile")},
+                input_data={
+                    k: v
+                    for k, v in raw_data.items()
+                    if k not in ("save_scenario", "scenario_name", "use_profile")
+                },
                 result_data=couple_summary,
                 name=raw_data.get("scenario_name"),
                 session_type="scenario",

@@ -15,7 +15,14 @@ from agents.guardrail_agent import run_guardrail
 from agents.mf_xray_agent import generate_mf_xray_advice
 from core.dependencies import get_current_user
 from core.exceptions import MoneyMentorError
-from db.session_store import User, append_log, create_session, update_session_state, update_portfolio_result, save_scenario
+from db.session_store import (
+    User,
+    append_log,
+    create_session,
+    save_scenario,
+    update_portfolio_result,
+    update_session_state,
+)
 from finance.amfi import ensure_nav_cache
 from finance.mf_xray import (
     analyse_portfolio,
@@ -197,23 +204,23 @@ async def mf_xray(
             "num_funds": len(result.holdings),
             "high_expense_funds": result.high_expense_funds,
         }
-        
+
         await update_session_state(
             session_id,
             current_user.id,
             "mf",
             summarized_result,
         )
-        
+
         await update_portfolio_result(current_user.id, "mf", summarized_result)
-        
+
         await save_scenario(
             user_id=current_user.id,
             feature="mf",
             input_data={"filename": filename, "type": "statement"},
             result_data=summarized_result,
             name="MF Statement Upload",
-            session_type="portfolio"
+            session_type="portfolio",
         )
 
         return MFXRayResponse(

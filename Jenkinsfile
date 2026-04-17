@@ -69,6 +69,7 @@ pipeline {
                 echo '─────────────────── Running SonarQube code quality scan ───────────────────'
                 withSonarQubeEnv('SonarQube') {
                     sh '''
+                        export PATH="/usr/local/bin:$HOME/.local/bin:$PATH"
                         sonar-scanner \
                           -Dsonar.projectKey=${SONAR_PROJECT} \
                           -Dsonar.projectName="AI Money Mentor" \

@@ -195,7 +195,7 @@ class Scenario(Base):
     session_type = Column(
         String(16),
         nullable=False,
-        default="scenario",      # safe default for existing rows
+        default="scenario",  # safe default for existing rows
         index=True,
     )
 
@@ -538,7 +538,9 @@ async def save_scenario(
     return scenario.id
 
 
-async def list_scenarios(user_id: str, feature: Optional[str] = None, session_type: Optional[str] = None) -> list[dict]:
+async def list_scenarios(
+    user_id: str, feature: Optional[str] = None, session_type: Optional[str] = None
+) -> list[dict]:
     """List saved scenarios for a user, newest first. Summary view only (no input_data)."""
     async with AsyncSessionLocal() as db:
         q = select(Scenario).where(Scenario.user_id == user_id)
