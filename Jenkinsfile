@@ -71,13 +71,14 @@ pipeline {
                     sh '''
                         export PATH="/usr/local/bin:$HOME/.local/bin:$PATH"
                         sonar-scanner \
-                          -Dsonar.projectKey=${SONAR_PROJECT} \
-                          -Dsonar.projectName="AI Money Mentor" \
-                          -Dsonar.sources=backend \
-                          -Dsonar.tests=backend/tests \
-                          -Dsonar.python.version=3.13 \
-                          -Dsonar.python.coverage.reportPaths=backend/coverage.xml \
-                          -Dsonar.exclusions=**/node_modules/**,**/__pycache__/**,**/.venv/**,**/.next/**
+                        -Dsonar.projectKey=${SONAR_PROJECT} \
+                        -Dsonar.projectName="AI Money Mentor" \
+                        -Dsonar.sources=backend \
+                        -Dsonar.tests=backend/tests \
+                        -Dsonar.test.inclusions=backend/tests/** \
+                        -Dsonar.exclusions=**/node_modules/**,**/__pycache__/**,**/.venv/**,**/.next/**,backend/tests/** \
+                        -Dsonar.python.version=3.13 \
+                        -Dsonar.python.coverage.reportPaths=backend/coverage.xml
                     '''
                 }
             }
