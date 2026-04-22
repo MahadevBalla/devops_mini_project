@@ -1,5 +1,16 @@
 # API Contract
 
+## Table of Contents
+
+- [1. Overview](#1-overview)
+- [2. Base URL](#2-base-url)
+- [3. Authentication](#3-authentication)
+- [4. Common Response Shape](#4-common-response-shape)
+- [5. Endpoints](#5-endpoints)
+- [6. Request Flow](#6-request-flow)
+- [7. Errors](#7-errors)
+- [8. Notes](#8-notes)
+
 ## 1. Overview
 
 This doc is the quick reference for the backend HTTP contracts: routes, request shapes, and response formats.
@@ -25,12 +36,16 @@ Authorization: Bearer <access_token>
 Public endpoints:
 
 - `GET /health`
+- `GET /metrics`
 - `POST /api/auth/signup`
 - `POST /api/auth/verify-email`
 - `POST /api/auth/resend-verification`
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
+- `GET /api/voice/voices`
+- `POST /api/voice/stt`
+- `POST /api/voice/tts`
 
 Protected endpoints:
 
@@ -54,7 +69,8 @@ Most feature endpoints return the same envelope:
     "summary": "string",
     "key_actions": ["string"],
     "risks": ["string"],
-    "disclaimer": "string"
+    "disclaimer": "string",
+    "regime_suggestion": null
   },
   "decision_log": []
 }
@@ -80,7 +96,7 @@ Notes:
 
 #### `GET /health`
 
-Liveness check.
+Liveness check. Docker Compose and Jenkins use this endpoint to verify backend health.
 
 Response:
 
@@ -90,6 +106,12 @@ Response:
   "version": "1.0.0"
 }
 ```
+
+#### `GET /metrics`
+
+Prometheus scrape endpoint exposed by the FastAPI instrumentator.
+
+This is not a user-facing API route. It exists for monitoring integration and returns Prometheus text exposition format.
 
 ### Auth
 
@@ -113,7 +135,9 @@ Response:
 {
   "message": "Account created successfully. Please check your email for verification code.",
   "email": "jane@example.com",
-  "verification_required": true
+  "verification_required": true,
+  "email_sent": true,
+  "dev_otp": null
 }
 ```
 
@@ -139,7 +163,13 @@ Response:
   "token_type": "bearer",
   "user": {
     "id": "user-id",
-    "email": "jane@example.com"
+    "full_name": "Jane Doe",
+    "email": "jane@example.com",
+    "phone": null,
+    "is_verified": true,
+    "is_active": true,
+    "created_at": "2026-04-21T10:00:00",
+    "last_login_at": "2026-04-21T10:00:00"
   }
 }
 ```
@@ -161,7 +191,9 @@ Response:
 ```json
 {
   "message": "Verification code resent. Please check your email.",
-  "email": "jane@example.com"
+  "email": "jane@example.com",
+  "email_sent": true,
+  "dev_otp": null
 }
 ```
 
@@ -187,7 +219,13 @@ Response:
   "token_type": "bearer",
   "user": {
     "id": "user-id",
-    "email": "jane@example.com"
+    "full_name": "Jane Doe",
+    "email": "jane@example.com",
+    "phone": null,
+    "is_verified": true,
+    "is_active": true,
+    "created_at": "2026-04-21T10:00:00",
+    "last_login_at": "2026-04-21T10:05:00"
   }
 }
 ```
@@ -213,7 +251,13 @@ Response:
   "token_type": "bearer",
   "user": {
     "id": "user-id",
-    "email": "jane@example.com"
+    "full_name": "Jane Doe",
+    "email": "jane@example.com",
+    "phone": null,
+    "is_verified": true,
+    "is_active": true,
+    "created_at": "2026-04-21T10:00:00",
+    "last_login_at": "2026-04-21T10:05:00"
   }
 }
 ```
@@ -264,7 +308,11 @@ Response:
   "id": "user-id",
   "email": "jane@example.com",
   "full_name": "Jane Doe",
-  "is_verified": true
+  "phone": null,
+  "is_verified": true,
+  "is_active": true,
+  "created_at": "2026-04-21T10:00:00",
+  "last_login_at": "2026-04-21T10:05:00"
 }
 ```
 
@@ -561,6 +609,65 @@ data: {"token":"on your plan..."}
 data: {"done":true}
 ```
 
+### Voice
+
+Voice endpoints are public and are used by the chat voice UI.
+
+#### `GET /api/voice/voices`
+
+List available text-to-speech voices.
+
+Response:
+
+```json
+{
+  "voices": {
+    "meera": "Female, Indian English..."
+  },
+  "default": "meera"
+}
+```
+
+#### `POST /api/voice/stt`
+
+Convert uploaded audio to text.
+
+Request:
+
+```text
+multipart/form-data
+audio=<wav|mp3|ogg|webm>
+language_code=en-IN
+```
+
+Response:
+
+```json
+{
+  "transcript": "What should I do with my bonus?",
+  "language": "en-IN"
+}
+```
+
+#### `POST /api/voice/tts`
+
+Convert text to speech.
+
+Request:
+
+```text
+multipart/form-data
+text=Your plan looks healthy.
+voice=meera
+language_code=en-IN
+```
+
+Response:
+
+```text
+audio/wav
+```
+
 ### Portfolio
 
 #### `GET /api/portfolio`
@@ -613,7 +720,7 @@ Response:
 
 #### `GET /api/portfolio/scenarios`
 
-List saved scenarios.
+List saved scenarios. Optional query filters: `feature`, `session_type`.
 
 Response:
 
@@ -621,8 +728,10 @@ Response:
 [
   {
     "id": "scenario-id",
+    "name": "Retire by 50",
     "feature": "fire",
     "session_type": "scenario",
+    "created_at": "2026-04-21T10:10:00",
     "result": {}
   }
 ]
@@ -632,9 +741,29 @@ Response:
 
 Get one saved scenario with input and result.
 
+Response:
+
+```json
+{
+  "id": "scenario-id",
+  "name": "Retire by 50",
+  "feature": "fire",
+  "session_type": "scenario",
+  "created_at": "2026-04-21T10:10:00",
+  "input_data": {},
+  "result": {}
+}
+```
+
 #### `DELETE /api/portfolio/scenarios/{scenario_id}`
 
 Delete one saved scenario.
+
+Response:
+
+```text
+204 No Content
+```
 
 ### Session
 
@@ -686,9 +815,12 @@ Error shape is typically:
 }
 ```
 
+Route-raised FastAPI errors may wrap that object under `detail`.
+
 ## 8. Notes
 
 - There is no `/process` endpoint.
 - Routes are feature-specific on purpose.
 - Finance outputs come from deterministic code.
 - Advice is a generated layer on top of those outputs.
+- `/metrics` is for monitoring integration, not product API usage.

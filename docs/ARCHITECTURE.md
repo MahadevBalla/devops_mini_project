@@ -6,6 +6,23 @@ This document is the quickest way to understand how the system is put together a
 
 It is not a product overview. It is the system view we wish every new engineer had on day one.
 
+## Table of Contents
+
+- [1. Overview](#1-overview)
+- [2. High-Level Architecture](#2-high-level-architecture)
+- [3. Request Lifecycle](#3-request-lifecycle)
+- [4. Agent Pipeline](#4-agent-pipeline)
+- [5. Finance Engine Design](#5-finance-engine-design)
+- [6. Chat + RAG Flow](#6-chat--rag-flow)
+- [7. API Layer](#7-api-layer)
+- [8. Data & Persistence](#8-data--persistence)
+- [9. Runtime Boundary & Observability](#9-runtime-boundary--observability)
+- [10. Error Handling & Guardrails](#10-error-handling--guardrails)
+- [11. Design Decisions](#11-design-decisions)
+- [12. Tradeoffs & Limitations](#12-tradeoffs--limitations)
+- [13. Future Improvements](#13-future-improvements)
+- [Closing Notes](#closing-notes)
+
 ## 1. Overview
 
 This system powers an AI-assisted personal finance product. The feature set is broad, but the execution model is pretty consistent:
@@ -67,10 +84,34 @@ FastAPI
    +--> GuardrailAgent
    |
    +--> SQLite persistence
-   +--> RAG index / knowledge base
+   +--> RAG embedding index / knowledge base
 ```
 
 The system is modular on purpose. Agents, finance logic, routers, models, and persistence are kept separate so we can reason about failures and change one layer without rewriting the others.
+
+There is also a runtime layer around this core application. It does not change the request lifecycle, but it matters for how the pieces relate in the deployed system:
+
+```text
+Browser
+   |
+   v
+Next.js frontend container
+   |
+   v
+FastAPI backend container
+   |
+   +--> SQLite volume
+   +--> LLM / voice / embedding providers
+   +--> AMFI NAV feed
+   |
+   +--> /health
+   +--> /metrics
+
+Prometheus -> backend /metrics + host/container exporters -> Grafana
+Jenkins -> tests + SonarQube scan + Docker images -> Compose runtime
+```
+
+That outer layer is intentionally separate from the application code. Docker and Compose define the runtime boundary, Jenkins and SonarQube define the quality gate around changes, and Prometheus/Grafana observe the running system. The backend itself still owns the product behavior.
 
 ## 3. Request Lifecycle
 
@@ -291,7 +332,7 @@ The chat endpoint does a few specific things:
 - verifies the session belongs to the current user
 - loads recent chat history from agent logs
 - reads saved session state from previous feature runs
-- retrieves relevant snippets from the local knowledge base
+- retrieves relevant snippets from the curated knowledge base
 - builds a prompt with user context plus retrieved text
 - calls the LLM
 - persists the new chat turn
@@ -309,7 +350,7 @@ User message
   -> /api/chat or /api/chat/stream
   -> load session and recent history
   -> load saved feature context from session.state_json
-  -> retrieve top-k docs from FAISS index
+  -> retrieve top-k docs from the in-memory embedding index
   -> call LLM
   -> append ChatAgent log
   -> return response
@@ -319,8 +360,9 @@ The RAG layer is intentionally small:
 
 - documents live in `rag/documents/`
 - the index is built at startup
-- retrieval uses FAISS with Sentence Transformers
-- if indexing fails, chat still works, just without retrieved context
+- embeddings are requested through Hugging Face `InferenceClient`
+- retrieval is in-memory cosine search over normalized vectors
+- if `HF_TOKEN` is missing or indexing fails, chat still works, just without retrieved context
 
 That last part matters. RAG is helpful, but it is not allowed to take the whole chat system down.
 
@@ -337,6 +379,7 @@ Examples:
 - portfolio routes under `/api/portfolio`
 - chat routes under `/api/chat` and `/api/chat/stream`
 - a plain `/health` route for liveness
+- a `/metrics` route exposed by the Prometheus instrumentator
 
 We use feature-specific endpoints instead of a generic `/process` endpoint for a few reasons:
 
@@ -399,7 +442,70 @@ Why persistence matters:
 - we need to support saved plans and what-if analysis
 - finance advice is easier to defend when there is an execution trail
 
-## 9. Error Handling & Guardrails
+## 9. Runtime Boundary & Observability
+
+The application is still a frontend plus backend system, but the repository now defines a clearer runtime shell around it.
+
+The important part architecturally is not "how to deploy it." That belongs elsewhere. The important part is which runtime concerns are now first-class enough that they shape the system:
+
+- the frontend is built as a Next.js standalone app
+- the backend is built as a Python 3.13 FastAPI container
+- Compose wires the frontend, backend, persistent SQLite volume, and monitoring services together
+- Jenkins runs the backend checks, pushes versioned images, and updates the Compose runtime
+- SonarQube analyzes the backend using the coverage report from CI
+- Prometheus scrapes app, host, container, and Prometheus metrics
+- Grafana reads Prometheus as its provisioned datasource
+
+### Container boundary
+
+The backend container is intentionally single-process:
+
+```text
+uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
+That matches the current SQLite choice. The database path is overridden in Compose so SQLite writes into `/app/data`, which is backed by a named Docker volume.
+
+The frontend is a standalone Next.js runtime. It calls the backend through `NEXT_PUBLIC_API_URL`, which is baked into the client bundle at build time.
+
+The container boundary is useful because it keeps local and deployed behavior close:
+
+- backend listens on `8000`
+- frontend listens on `3000`
+- backend exposes `/health` for liveness
+- backend exposes `/metrics` for Prometheus
+- SQLite data lives outside the backend container filesystem
+
+### Monitoring boundary
+
+The backend exposes Prometheus metrics through `prometheus-fastapi-instrumentator`.
+
+Prometheus scrapes:
+
+- backend metrics from `mm-backend:8000/metrics`
+- host metrics through node-exporter
+- container metrics through cAdvisor
+- Prometheus itself
+
+Grafana is not part of the request path. It is a read-side observability layer over Prometheus.
+
+This gives the system a baseline operational view without changing the core request model. The feature flow is still request/response through FastAPI; monitoring watches that flow from the side.
+
+### Quality boundary
+
+CI/CD sits outside the runtime path, but it affects what we trust enough to run.
+
+The Jenkins pipeline currently checks the backend in a few specific ways:
+
+- installs dependencies with `uv` from `uv.lock`
+- runs deterministic backend tests with coverage
+- runs `ruff`
+- sends backend sources and coverage to SonarQube
+- builds and publishes backend and frontend Docker images
+
+That matters architecturally because the finance engine is expected to remain deterministic and testable. The pipeline reinforces that boundary by testing finance-heavy backend behavior without requiring LLM, database, or network access.
+
+## 10. Error Handling & Guardrails
 
 Error handling is layered. That is deliberate.
 
@@ -436,7 +542,7 @@ Guardrails are not just prompt text. They are enforced in two layers:
 
 That second layer is important because compliance cannot depend entirely on a model behaving nicely.
 
-## 10. Design Decisions
+## 11. Design Decisions
 
 These are the main decisions that shape the codebase.
 
@@ -480,7 +586,23 @@ We want chat responses to be grounded in:
 
 That combination is much more useful than a standalone chat model answering from memory.
 
-## 11. Tradeoffs & Limitations
+### Why containers around a small app
+
+Because the system has more than one runtime concern now.
+
+The application code is still simple: a frontend, a backend, and SQLite by default. But the running system also needs stable process boundaries, health checks, metrics, repeatable builds, and a predictable data mount for SQLite.
+
+Containers give us that without forcing the product architecture to become more complicated than it needs to be.
+
+### Why Prometheus metrics at the app edge
+
+Because the backend is the place where request behavior, route latency, and failure patterns become visible.
+
+Infrastructure metrics tell us whether the host and containers are alive. Application metrics tell us whether the API itself is behaving. We need both, but they answer different questions.
+
+That is why `/metrics` lives in FastAPI while node-exporter and cAdvisor live beside it in the runtime stack.
+
+## 12. Tradeoffs & Limitations
 
 There are some real limitations in the current design.
 
@@ -512,7 +634,7 @@ Some parts are strong and explicit:
 Some parts still need hardening:
 
 - database migration story
-- richer observability
+- richer application-level observability
 - stronger background job / workflow support
 - more formal production infrastructure assumptions
 
@@ -520,7 +642,7 @@ Some parts still need hardening:
 
 Some caches are in-memory and startup work is local to the app process. That is fine right now, but distributed deployment will need more deliberate coordination.
 
-## 12. Future Improvements
+## 13. Future Improvements
 
 There are a few obvious next steps if we keep pushing this backend.
 

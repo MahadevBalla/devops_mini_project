@@ -4,6 +4,22 @@ Full-stack personal finance app for Indian users.
 
 It combines a deterministic finance engine with an agent pipeline to run planners, portfolio analysis, and chat on top of typed user and session data.
 
+## Table of Contents
+
+- [Demo](#demo)
+- [Problem](#problem)
+- [What This App Does](#what-this-app-does)
+- [How It Works](#how-it-works)
+- [Tech Overview](#tech-overview)
+- [Repository Structure](#repository-structure)
+- [Quick Start](#quick-start)
+- [Full Setup Guide](#full-setup-guide)
+- [Impact](#impact)
+- [Documentation](#documentation)
+- [Deployment and Operations](#deployment-and-operations)
+- [Environment and Security Notes](#environment-and-security-notes)
+- [Troubleshooting](#troubleshooting)
+
 ## Demo
 
 [*Product walkthrough (video)*](https://youtu.be/5ho6rQHla9g)
@@ -39,12 +55,18 @@ User input -> API -> Intake -> Finance Engine -> Mentor -> Guardrail -> Response
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS
 - Database: SQLite by default for local development
 - LLM providers: Groq and Gemini
+- RAG embeddings: Hugging Face Inference API
 - Voice: Sarvam AI
+- Runtime: Docker and Docker Compose
+- CI/CD and quality: Jenkins, SonarQube, Docker Hub
+- Monitoring: Prometheus, Grafana, node-exporter, cAdvisor
+- Infrastructure: Terraform and Ansible for the EC2 deployment path
 
 ## Repository Structure
 
 ```text
 et-money-mentor/
+├─ ansible/
 ├─ backend/
 │  ├─ agents/
 │  ├─ core/
@@ -59,6 +81,11 @@ et-money-mentor/
 │  ├─ src/
 │  ├─ public/
 │  └─ package.json
+├─ monitoring/
+├─ terraform/
+├─ docker-compose.yml
+├─ docker-compose.prod.yml
+├─ Jenkinsfile
 └─ README.md
 ```
 
@@ -67,25 +94,34 @@ et-money-mentor/
 ```bash
 # backend
 cd backend
-uvicorn main:app --reload
+uv sync --group dev
+cp .env.example .env
+uv run uvicorn main:app --reload
 
 # frontend (new terminal)
 cd frontend
+npm install
 npm run dev
 ```
+
+If you prefer standard Python tooling instead of `uv`, use the `venv + pip` flow in the backend setup section below and run backend commands without the `uv run` prefix.
 
 ## Full Setup Guide
 
 ### 1. Prerequisites
 
-- Python 3.11+ (3.13 used in local project docs)
-- Node.js 18+
+- Python 3.13+
+- Node.js 22+
 - npm 9+
 - Git
+- `uv` (recommended for faster environment and dependency management): <https://docs.astral.sh/uv/getting-started/installation/>
+
+Alternative backend setup is also supported with native Python tooling (`python -m venv` + `pip`).
 
 Optional but useful:
 
 - Groq API key or Gemini API key
+- Hugging Face token for RAG-backed chat context
 - Sarvam API key for voice features
 
 ### 2. Clone Repository
@@ -97,29 +133,32 @@ cd et-money-mentor
 
 ### 3. Backend Setup
 
+Choose one setup path:
+
+#### Option A (recommended): `uv`
+
+```bash
+cd backend
+uv sync --group dev
+```
+
+#### Option B: native Python (`venv` + `pip`)
+
 ```bash
 cd backend
 python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-Windows PowerShell:
+Windows PowerShell activation:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
-macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-```
+> Note: If you are not using `uv`, run backend commands without the `uv run` prefix.
 
 Create and configure environment:
 
@@ -131,19 +170,21 @@ Update these values in [backend/.env](backend/.env):
 
 - `LLM_PROVIDER`
 - `GROQ_API_KEY` or `GEMINI_API_KEY`
+- `HF_TOKEN` if using RAG-backed chat context
 - `SARVAM_API_KEY` if using voice
 - `SECRET_KEY`
 
 Run backend:
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Backend URLs:
 
 - API: `http://localhost:8000`
 - Swagger: `http://localhost:8000/docs`
+- Metrics: `http://localhost:8000/metrics`
 
 ### 4. Frontend Setup
 
@@ -157,7 +198,7 @@ npm install
 Create environment file if needed:
 
 ```bash
-cp .env.example .env.local
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 ```
 
 Set the frontend API base URL if required:
@@ -180,7 +221,7 @@ Backend tests:
 
 ```bash
 cd backend
-pytest
+uv run pytest tests -v
 ```
 
 Frontend checks:
@@ -196,6 +237,14 @@ Terminal 1:
 
 ```bash
 cd backend
+uv run uvicorn main:app --reload
+```
+
+If you are using the native Python path (Option B), run:
+
+```bash
+cd backend
+source .venv/bin/activate
 uvicorn main:app --reload
 ```
 
@@ -205,6 +254,21 @@ Terminal 2:
 cd frontend
 npm run dev
 ```
+
+### 7. Docker Compose Workflow
+
+The root Compose file builds the backend and frontend from local source:
+
+```bash
+docker compose up --build
+```
+
+Compose exposes:
+
+- Backend: `http://localhost:8000`
+- Frontend: `http://localhost:3000`
+
+The backend SQLite database is persisted in the `backend_data` Docker volume.
 
 ## Impact
 
@@ -219,7 +283,19 @@ npm run dev
 - Frontend: [frontend/README.md](frontend/README.md)
 - Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - API Contract: [docs/API_CONTRACT.md](docs/API_CONTRACT.md)
+- Deployment: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - Impact Model: [docs/IMPACT_MODEL.md](docs/IMPACT_MODEL.md)
+
+## Deployment and Operations
+
+The repository includes a deployment path for EC2:
+
+- Terraform provisions the instance and security group
+- Ansible installs Docker and prepares Jenkins, SonarQube, and runtime files
+- Jenkins runs backend tests, SonarQube analysis, Docker image builds, and Compose deployment
+- Prometheus and Grafana monitor the running application and host/container metrics
+
+For the full deployment flow, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Environment and Security Notes
 
@@ -235,4 +311,5 @@ npm run dev
 - CORS errors:
   Add the frontend URL to `ALLOWED_ORIGINS` in [backend/.env](backend/.env).
 - Build or type errors:
-  Run `npm run build` in [frontend](frontend) and `pytest` in [backend](backend).
+  Run `npm run build` in [frontend](frontend) and backend tests in [backend](backend)
+  using either `uv run pytest tests -v` or `pytest tests -v` (if using `venv + pip`).

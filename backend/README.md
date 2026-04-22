@@ -6,6 +6,24 @@ This service handles the finance features, chat, auth, portfolio state, and the 
 
 If you want the deeper system walkthrough, read [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md).
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Folder Structure](#folder-structure)
+- [Agent System](#agent-system)
+- [API Design](#api-design)
+- [Data Flow](#data-flow)
+- [Setup](#setup)
+- [Environment Variables](#environment-variables)
+- [Docker](#docker)
+- [Testing](#testing)
+- [Error Handling](#error-handling)
+- [Future Improvements](#future-improvements)
+
 ## Overview
 
 This service does two things:
@@ -41,6 +59,21 @@ LLMs are not used for:
 
 ## Quick Start
 
+Choose one setup path:
+
+### Option A (recommended): `uv`
+
+```bash
+cd backend
+
+uv sync --group dev
+cp .env.example .env
+
+uv run uvicorn main:app --reload
+```
+
+### Option B: native Python (`venv` + `pip`)
+
 ```bash
 cd backend
 
@@ -48,10 +81,19 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env
 
 uvicorn main:app --reload
 ```
+
+Windows PowerShell activation:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+> Note: If you are not using `uv`, run backend commands without the `uv run` prefix.
 
 API: `http://localhost:8000`
 
@@ -61,10 +103,11 @@ Docs (if `DEBUG=true`): `http://localhost:8000/docs`
 
 - agent pipeline for feature execution (intake → finance → mentor → guardrail)
 - deterministic finance modules for FIRE, tax, health, life events, couple planning, and MF X-Ray
-- local RAG for chat over curated finance documents
+- RAG for chat over curated finance documents, backed by Hugging Face embeddings
 - authenticated APIs for users, portfolio state, scenarios, and chat
 - session and agent logging for continuity and debugging
 - deterministic fallback behavior when LLM-dependent steps fail
+- Prometheus metrics exposed at `/metrics`
 
 ## Tech Stack
 
@@ -72,7 +115,7 @@ Docs (if `DEBUG=true`): `http://localhost:8000/docs`
 
 - FastAPI
 - Uvicorn
-- Python 3.10+ (3.13 used locally)
+- Python 3.13+
 - Pydantic and `pydantic-settings`
 
 ### Persistence
@@ -84,8 +127,14 @@ Docs (if `DEBUG=true`): `http://localhost:8000/docs`
 
 - provider abstraction in [`core/llm_client.py`](./core/llm_client.py)
 - Groq and Gemini adapters in the current codebase
-- FAISS + Sentence Transformers for retrieval
+- Hugging Face `InferenceClient` for chat RAG embeddings
+- in-memory cosine search over curated markdown chunks
 - curated markdown docs in [`rag/documents/`](./rag/documents)
+
+### Observability
+
+- `prometheus-fastapi-instrumentator`
+- `/metrics` endpoint for Prometheus scraping
 
 ### Other notable dependencies
 
@@ -93,6 +142,7 @@ Docs (if `DEBUG=true`): `http://localhost:8000/docs`
 - `numpy`, `numpy-financial`, `scipy`
 - `passlib`, `pyjwt`
 - `python-multipart`
+- `huggingface-hub`
 
 ## Architecture
 
@@ -285,7 +335,7 @@ Chat is slightly different from the feature endpoints:
 
 - it loads recent chat history
 - it reads saved session state from earlier feature runs
-- it optionally adds retrieved context from the local knowledge base
+- it optionally adds retrieved context from the curated finance knowledge base
 
 That is how follow-up questions can refer back to a previous FIRE or tax result without recomputing everything.
 
@@ -293,28 +343,46 @@ That is how follow-up questions can refer back to a previous FIRE or tax result 
 
 ### Prerequisites
 
-- Python 3.10+ (3.13 used locally)
-- `pip` or `uv`
+- Python 3.13+
+- `uv` (recommended for faster environment and dependency management): <https://docs.astral.sh/uv/getting-started/installation/>
+- or native Python tooling (`python -m venv` + `pip`)
 - credentials for the LLM provider you plan to use
+- `HF_TOKEN` if you want document retrieval in chat
 
 ### Local setup
 
-```bash
-cd backend
+Choose one setup path:
 
-python -m venv .venv
-source .venv/bin/activate
+- Option A (recommended): `uv`
 
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+  ```bash
+  cd backend
 
-cp .env.example .env
-```
+  uv sync --group dev
+
+  cp .env.example .env
+  ```
+
+- Option B: native Python (`venv` + `pip`)
+
+  ```bash
+  cd backend
+
+  python -m venv .venv
+  source .venv/bin/activate
+
+  pip install -r requirements.txt
+  pip install -r requirements-dev.txt
+
+  cp .env.example .env
+  ```
+
+> Note: If you are not using `uv`, run backend commands without the `uv run` prefix.
 
 ### Run the server
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 If `DEBUG=true`, docs are available at:
@@ -337,9 +405,7 @@ make fmt
 Example `.env`:
 
 ```bash
-OPENAI_API_KEY=
 DATABASE_URL=sqlite+aiosqlite:///./money_mentor.db
-ENV=development
 
 APP_NAME=AI Money Mentor
 APP_VERSION=1.0.0
@@ -350,31 +416,57 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 LLM_PROVIDER=groq
 GROQ_API_KEY=
 GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MAX_TOKENS=2048
+GROQ_TEMPERATURE=0.3
 
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-3-flash-preview
+
+HF_TOKEN=
+HF_RAG_MODEL=sentence-transformers/all-MiniLM-L6-v2
 
 SECRET_KEY=CHANGE_THIS_IN_PRODUCTION_USE_openssl_rand_hex_32
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM_EMAIL=
+SMTP_FROM_NAME=AI Money Mentor
+
 SARVAM_API_KEY=
+SARVAM_DEFAULT_VOICE=meera
+SARVAM_DEFAULT_LANGUAGE=en-IN
+SARVAM_TTS_PACE=1.0
+SARVAM_TTS_SAMPLE_RATE=22050
+
+DEFAULT_INFLATION_RATE=0.06
+DEFAULT_EQUITY_RETURN=0.12
+DEFAULT_DEBT_RETURN=0.07
+DEFAULT_SAFE_WITHDRAWAL_RATE=0.04
+DEFAULT_STEPUP_RATE=0.10
+EMERGENCY_FUND_MONTHS=6
 ```
 
 Notes:
 
 - The app reads `GROQ_API_KEY` or `GEMINI_API_KEY` based on `LLM_PROVIDER`.
-- `DATABASE_URL` and `DEBUG` are actively used.
-- `OPENAI_API_KEY` is kept for compatibility but not used in the current codebase.
+- `HF_TOKEN` enables RAG embeddings through Hugging Face. If it is missing or the API is unavailable, chat still runs without retrieved document context.
+- `DATABASE_URL`, `DEBUG`, and `ALLOWED_ORIGINS` are actively used at runtime.
+- `DEBUG=true` enables Swagger and ReDoc routes.
 
 ## Docker
 
 The backend ships with a `Dockerfile`, and the repo has Compose config at [`../docker-compose.yml`](../docker-compose.yml).
 
+The Dockerfile uses a multi-stage `uv` build on `python:3.13-slim`, installs locked production dependencies from `uv.lock`, copies the virtual environment into the runtime image, and runs Uvicorn as a non-root `appuser`.
+
 ### Build the backend image
 
 ```bash
-docker build -t ai-money-mentor-backend .
+DOCKER_BUILDKIT=1 docker build -t ai-money-mentor-backend .
 ```
 
 ### Run with Docker Compose
@@ -389,6 +481,7 @@ The current Compose setup:
 - persists SQLite data in a named volume
 - exposes port `8000`
 - checks `/health`
+- exposes `/metrics` from the FastAPI app for Prometheus
 - starts the frontend after the backend is healthy
 
 ## Testing
@@ -398,7 +491,7 @@ Tests use `pytest`.
 Run all tests:
 
 ```bash
-pytest tests -v
+uv run pytest tests -v
 ```
 
 Or use:
@@ -414,6 +507,8 @@ The current suite covers things like:
 - life-event analysis
 - couple planning
 - MF X-Ray analysis
+
+CI runs the deterministic backend test subset with `uv`, writes `coverage.xml`, and sends that coverage to SonarQube for backend analysis.
 
 ## Error Handling
 

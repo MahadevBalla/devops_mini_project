@@ -1,5 +1,15 @@
 # Impact Model
 
+## Table of Contents
+
+- [1. Overview](#1-overview)
+- [2. Key Assumptions](#2-key-assumptions)
+- [3. Impact Areas](#3-impact-areas)
+- [4. Per-User Annual Impact](#4-per-user-annual-impact)
+- [5. Scale Impact](#5-scale-impact)
+- [6. Non-Quantifiable Impact](#6-non-quantifiable-impact)
+- [7. Limitations](#7-limitations)
+
 ## 1. Overview
 
 This is a rough impact model for AI Money Mentor.
