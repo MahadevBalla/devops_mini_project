@@ -133,7 +133,7 @@ function DashboardLoader() {
 
 // ─── Hero Header ──────────────────────────────────────────────────────────────
 function DashboardHero({ name }: { name?: string }) {
-  const greeting = name ? `Welcome back, ${name.split(" ")[0]}` : "Welcome back";
+  const greeting = name ? `Welcome , ${name.split(" ")[0]}` : "Welcome";
   return (
     <div className="relative rounded-2xl overflow-hidden border border-border-subtle shadow-(--shadow-sm)">
       <div className="absolute inset-0 bg-mesh" />

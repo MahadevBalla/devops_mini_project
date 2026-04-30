@@ -561,7 +561,7 @@ function AnimatedCharactersLoginPage({ mode = 'signin' }: AnimatedCharactersLogi
           {/* Header */}
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold tracking-tight mb-2">
-              {mode === 'signup' ? 'Create an account' : 'Welcome back!'}
+              {mode === 'signup' ? 'Create an account' : 'Welcome !'}
             </h1>
             <p className="text-muted-foreground text-sm">
               {mode === 'signup' ? 'Sign up to get started' : 'Please enter your details'}

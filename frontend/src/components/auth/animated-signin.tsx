@@ -454,7 +454,7 @@ export function AnimatedSignin() {
                 WebkitTextFillColor: "transparent",
                 color: "transparent",
               }}
-              className="text-display-sm">Welcome back!</h1>
+              className="text-display-sm">Welcome !</h1>
             <p className="text-muted-foreground text-sm mt-1.5">Enter your credentials to continue</p>
           </div>
 
