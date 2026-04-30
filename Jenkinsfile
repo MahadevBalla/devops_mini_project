@@ -122,6 +122,10 @@ pipeline {
             steps {
                 echo '─────────────────── Deploying via docker compose ───────────────────'
                 sh '''
+                    # Sync latest compose file from repo to app dir
+                    cp docker-compose.prod.yml /home/ubuntu/app/docker-compose.yml
+
+                    
                     docker compose -f /home/ubuntu/app/docker-compose.yml pull
                     docker compose -f /home/ubuntu/app/docker-compose.yml up -d --remove-orphans
                     docker image prune -f
